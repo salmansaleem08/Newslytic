@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: newslytic-api
+    env: node
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm install --include=dev && pip install -r requirements.txt && npm run build
+    startCommand: npm run start
+    healthCheckPath: /health
+    autoDeploy: true

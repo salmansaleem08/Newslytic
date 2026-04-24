@@ -15,7 +15,7 @@
     "start": "npm run start -w web"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
