@@ -11,7 +11,8 @@ const envSchema = z.object({
   NEWS_API_KEY: z.string().optional(),
   GNEWS_API_KEY: z.string().optional(),
   FACTCHECK_API_KEY: z.string().optional(),
-  APP_ORIGIN: z.string().default("http://localhost:3000")
+  APP_ORIGIN: z.string().default("http://localhost:3000"),
+  JWT_SECRET: z.string().min(16).default("change-me-in-production")
 });
 
 export const env = envSchema.parse(process.env);

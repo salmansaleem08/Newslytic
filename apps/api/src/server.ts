@@ -1,6 +1,8 @@
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import express from "express";
 import cron from "node-cron";
+import { authRouter } from "./routes/auth.js";
 import { env } from "./config.js";
 import { connectDb } from "./db.js";
 import { newsRouter } from "./routes/news.js";
@@ -8,7 +10,8 @@ import { runNewsSync } from "./services/news-sync.js";
 
 const app = express();
 
-app.use(cors({ origin: env.APP_ORIGIN }));
+app.use(cors({ origin: env.APP_ORIGIN, credentials: true }));
+app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => {
@@ -16,6 +19,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/news", newsRouter);
+app.use("/api/auth", authRouter);
 
 async function bootstrap() {
   await connectDb();
