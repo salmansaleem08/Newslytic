@@ -4,6 +4,7 @@ const newsThoughtSchema = new Schema(
   {
     newsItemId: { type: String, required: true, index: true },
     authorName: { type: String, required: true, trim: true },
+    authorAvatar: { type: String, default: "" },
     content: { type: String, required: true, trim: true, maxlength: 400 }
   },
   { timestamps: true }

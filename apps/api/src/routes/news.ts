@@ -1,7 +1,11 @@
 import { Router } from "express";
+import type { Request } from "express";
+import jwt from "jsonwebtoken";
 import { z } from "zod";
+import { env } from "../config.js";
 import { NEWS_CATEGORIES, type NewsCategory, NewsItemModel } from "../models/news-item.js";
 import { NewsThoughtModel } from "../models/news-thought.js";
+import { UserModel } from "../models/user.js";
 import { runNewsSync } from "../services/news-sync.js";
 
 export const newsRouter = Router();
@@ -66,20 +70,38 @@ newsRouter.get("/:newsId/thoughts", async (req, res) => {
 });
 
 const createThoughtSchema = z.object({
-  authorName: z.string().min(1).max(40),
   content: z.string().min(1).max(400)
 });
+
+function readToken(req: Request): string | null {
+  return req.cookies?.newslytic_token ?? null;
+}
 
 newsRouter.post("/:newsId/thoughts", async (req, res) => {
   const parsed = createThoughtSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid thought payload" });
+
+  const token = readToken(req);
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  let userId = "";
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as { sub: string };
+    userId = payload.sub;
+  } catch {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const user = await UserModel.findById(userId).lean();
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
 
   const newsExists = await NewsItemModel.exists({ _id: req.params.newsId });
   if (!newsExists) return res.status(404).json({ error: "News item not found" });
 
   const thought = await NewsThoughtModel.create({
     newsItemId: req.params.newsId,
-    authorName: parsed.data.authorName,
+    authorName: `${user.firstName} ${user.lastName}`.trim(),
+    authorAvatar: "",
     content: parsed.data.content
   });
 

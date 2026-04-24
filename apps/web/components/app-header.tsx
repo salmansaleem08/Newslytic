@@ -1,11 +1,11 @@
 "use client";
 
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { API_BASE } from "../lib/api";
+import { cn } from "../lib/cn";
 import { Button } from "./ui/button";
 
 const routes = [
@@ -19,23 +19,12 @@ const routes = [
 
 type Props = {
   showLogout?: boolean;
+  className?: string;
+  overlay?: boolean;
 };
 
-export function AppHeader({ showLogout = true }: Props) {
+export function AppHeader({ showLogout = true, className, overlay = false }: Props) {
   const pathname = usePathname();
-  const [isDark, setIsDark] = useState(
-    typeof window !== "undefined" ? document.documentElement.classList.contains("dark") : false
-  );
-
-  function toggleTheme() {
-    const root = document.documentElement;
-    const nextDark = !root.classList.contains("dark");
-    root.classList.toggle("dark", nextDark);
-    root.classList.toggle("light", !nextDark);
-    root.style.colorScheme = nextDark ? "dark" : "light";
-    localStorage.setItem("theme", nextDark ? "dark" : "light");
-    setIsDark(nextDark);
-  }
 
   async function logout() {
     await fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" }).catch(() => undefined);
@@ -43,20 +32,28 @@ export function AppHeader({ showLogout = true }: Props) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background text-foreground">
-      <div className="flex w-full items-center gap-3 px-6 py-3">
+    <header className={cn("sticky top-0 z-40 h-[var(--header-height)] border-b border-border bg-background text-foreground", className)}>
+      <div className="flex h-full w-full items-center gap-3 px-6">
         <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
           <Image src="/logo.svg" alt="Newslytic logo" width={34} height={34} />
-          <span className="text-xl font-bold">Newslytic</span>
+          <span className="hidden text-xl font-bold sm:inline">Newslytic</span>
         </Link>
         <nav className="ml-auto flex min-w-0 items-center gap-4 overflow-x-auto">
           {routes.map((route) => {
-            const active = pathname.startsWith(route.href);
+            const active = route.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(route.href);
             return (
               <Link
                 key={route.href}
                 href={route.href}
-                className={`shrink-0 text-sm font-medium transition ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`shrink-0 text-sm font-medium transition ${
+                  overlay
+                    ? active
+                      ? "text-primary"
+                      : "text-foreground/80 hover:text-foreground hover:underline hover:underline-offset-4"
+                    : active
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:underline hover:underline-offset-4"
+                }`}
               >
                 {route.label}
               </Link>
@@ -64,13 +61,19 @@ export function AppHeader({ showLogout = true }: Props) {
           })}
         </nav>
         <div className="ml-2 flex shrink-0 items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-            {isDark ? <Sun /> : <Moon />}
-          </Button>
+          <Link href="/dashboard/settings">
+            <Button
+              variant={pathname.startsWith("/dashboard/settings") ? "default" : "outline"}
+              size="icon"
+              aria-label="Open settings"
+            >
+              <Settings />
+            </Button>
+          </Link>
           {showLogout ? (
             <Button variant="outline" size="sm" onClick={logout}>
               <LogOut />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           ) : null}
         </div>

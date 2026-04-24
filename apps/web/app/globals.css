@@ -90,18 +90,10 @@ body {
   border-color: var(--border);
 }
 
-button,
-input,
-textarea,
-select,
 a {
   outline: none;
 }
 
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
 a:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
 }
