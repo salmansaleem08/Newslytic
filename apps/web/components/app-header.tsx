@@ -11,9 +11,10 @@ import { Button } from "./ui/button";
 const routes = [
   { href: "/dashboard", label: "Smart Feed" },
   { href: "/dashboard/ai-news-caster", label: "News Caster" },
-  { href: "/dashboard/what-you-missed", label: "What You Missed" },
+  { href: "/dashboard/what-you-missed", label: "Sentiment" },
   { href: "/dashboard/truth-check", label: "Truth Check" },
-  { href: "/dashboard/meme-decoder", label: "Meme Decoder" },
+  { href: "/dashboard/meme-decoder", label: "Bias Detector" },
+  { href: "/dashboard/trend-prediction", label: "Trend Engine" },
   { href: "/dashboard/community", label: "Community" }
 ];
 
