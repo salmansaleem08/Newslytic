@@ -71,8 +71,13 @@ export default function NewsDetailPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader rightSlot={<Link href="/dashboard"><Button variant="outline">Back to feed</Button></Link>} />
+      <AppHeader />
       <main className="w-full px-6 py-8">
+        <div className="mb-4">
+          <Link href="/dashboard">
+            <Button variant="outline">Back to feed</Button>
+          </Link>
+        </div>
         {loading || !item ? (
           <Card>
             <CardHeader>

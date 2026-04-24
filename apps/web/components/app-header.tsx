@@ -1,9 +1,12 @@
 "use client";
 
+import { LogOut, Moon, Sun } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState } from "react";
+import { API_BASE } from "../lib/api";
+import { Button } from "./ui/button";
 
 const routes = [
   { href: "/dashboard", label: "Smart Feed" },
@@ -15,11 +18,29 @@ const routes = [
 ];
 
 type Props = {
-  rightSlot?: ReactNode;
+  showLogout?: boolean;
 };
 
-export function AppHeader({ rightSlot }: Props) {
+export function AppHeader({ showLogout = true }: Props) {
   const pathname = usePathname();
+  const [isDark, setIsDark] = useState(
+    typeof window !== "undefined" ? document.documentElement.classList.contains("dark") : false
+  );
+
+  function toggleTheme() {
+    const root = document.documentElement;
+    const nextDark = !root.classList.contains("dark");
+    root.classList.toggle("dark", nextDark);
+    root.classList.toggle("light", !nextDark);
+    root.style.colorScheme = nextDark ? "dark" : "light";
+    localStorage.setItem("theme", nextDark ? "dark" : "light");
+    setIsDark(nextDark);
+  }
+
+  async function logout() {
+    await fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" }).catch(() => undefined);
+    window.location.href = "/login";
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background text-foreground">
@@ -42,7 +63,17 @@ export function AppHeader({ rightSlot }: Props) {
             );
           })}
         </nav>
-        {rightSlot ? <div className="shrink-0">{rightSlot}</div> : null}
+        <div className="ml-2 flex shrink-0 items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+            {isDark ? <Sun /> : <Moon />}
+          </Button>
+          {showLogout ? (
+            <Button variant="outline" size="sm" onClick={logout}>
+              <LogOut />
+              Logout
+            </Button>
+          ) : null}
+        </div>
       </div>
     </header>
   );
