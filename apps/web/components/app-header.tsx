@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 const routes = [
+  { href: "/dashboard", label: "Smart Feed" },
   { href: "/dashboard/ai-news-caster", label: "News Caster" },
   { href: "/dashboard/what-you-missed", label: "What You Missed" },
   { href: "/dashboard/truth-check", label: "Truth Check" },

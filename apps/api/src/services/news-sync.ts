@@ -1,6 +1,7 @@
 import axios from "axios";
 import { env } from "../config.js";
 import { NEWS_CATEGORIES, type NewsCategory, NewsItemModel } from "../models/news-item.js";
+import { NewsSyncStateModel } from "../models/news-sync-state.js";
 import { summarizeNews } from "./gemini.js";
 
 function getDayKey(date = new Date()): string {
@@ -15,6 +16,22 @@ async function pruneOldDays(): Promise<void> {
 
   const toRemove = sorted.slice(0, sorted.length - 10);
   await NewsItemModel.deleteMany({ dayKey: { $in: toRemove } });
+}
+
+async function shouldRunSync(force = false): Promise<boolean> {
+  if (force) return true;
+  const state = await NewsSyncStateModel.findOne({ key: "feed-sync" }).lean();
+  if (!state?.lastSyncedAt) return true;
+  const ageMs = Date.now() - new Date(state.lastSyncedAt).getTime();
+  return ageMs >= env.NEWS_SYNC_INTERVAL_MINUTES * 60_000;
+}
+
+async function markSynced(): Promise<void> {
+  await NewsSyncStateModel.findOneAndUpdate(
+    { key: "feed-sync" },
+    { key: "feed-sync", lastSyncedAt: new Date() },
+    { upsert: true, new: true }
+  );
 }
 
 async function enforceDailyCap(dayKey: string, maxItems = 15): Promise<void> {
@@ -139,6 +156,11 @@ async function fetchCategoryArticles(category: NewsCategory): Promise<ProviderAr
 type SyncOptions = { force?: boolean; categories?: NewsCategory[] };
 
 export async function runNewsSync(options: SyncOptions = {}): Promise<{ inserted: number; skipped: number }> {
+  const canSyncNow = await shouldRunSync(Boolean(options.force));
+  if (!canSyncNow) {
+    return { inserted: 0, skipped: 0 };
+  }
+
   const dayKey = getDayKey();
   let inserted = 0;
   let skipped = 0;
@@ -180,6 +202,7 @@ export async function runNewsSync(options: SyncOptions = {}): Promise<{ inserted
 
   await enforceDailyCap(dayKey, 15);
   await pruneOldDays();
+  await markSynced();
 
   return { inserted, skipped };
 }
