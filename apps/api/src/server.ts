@@ -24,9 +24,13 @@ app.use("/api/auth", authRouter);
 async function bootstrap() {
   await connectDb();
 
-  // Runs at minute 0 every hour for incremental updates.
-  cron.schedule("0 * * * *", async () => {
-    await runNewsSync();
+  // Runs every 5 hours to protect provider API limits.
+  cron.schedule("0 */5 * * *", async () => {
+    try {
+      await runNewsSync();
+    } catch (error) {
+      console.error("Scheduled news sync failed:", error);
+    }
   });
 
   // Initial boot sync (best effort).

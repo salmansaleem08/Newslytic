@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AppHeader } from "../../components/app-header";
 import { Button } from "../../components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { API_BASE, type AuthUser } from "../../lib/api";
@@ -35,10 +37,13 @@ export default function DashboardPage() {
       limit: "15",
       refresh: refresh ? "1" : "0"
     });
-    const newsRes = await fetch(`${API_BASE}/api/news/feed?${params.toString()}`, { cache: "no-store" });
-    const newsData = (await newsRes.json().catch(() => ({ items: [] }))) as { items?: NewsItem[] };
-    setItems(newsData.items ?? []);
-    setSyncing(false);
+    try {
+      const newsRes = await fetch(`${API_BASE}/api/news/feed?${params.toString()}`, { cache: "no-store" });
+      const newsData = (await newsRes.json().catch(() => ({ items: [] }))) as { items?: NewsItem[] };
+      setItems(newsData.items ?? []);
+    } finally {
+      setSyncing(false);
+    }
   }
 
   useEffect(() => {
@@ -66,19 +71,14 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-          <div>
-            <p className="text-xl font-bold">Newslytic Dashboard</p>
-            <p className="text-sm text-muted-foreground">Welcome {user ? `${user.firstName} ${user.lastName}` : ""}</p>
-          </div>
+      <AppHeader
+        rightSlot={
           <Button variant="outline" onClick={logout}>
             Logout
           </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl px-6 py-8">
+        }
+      />
+      <main className="w-full px-6 py-8">
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -91,6 +91,7 @@ export default function DashboardPage() {
               <CardDescription className="text-base">
                 Verified summaries and signal-first updates crafted for founder-level decision speed.
               </CardDescription>
+              {user ? <CardDescription>Welcome {user.firstName}.</CardDescription> : null}
             </CardHeader>
           </Card>
         </motion.section>
@@ -119,6 +120,36 @@ export default function DashboardPage() {
           </Button>
         </section>
 
+        {items.length > 0 ? (
+          <section className="mt-6">
+            <motion.article
+              key={items[0]._id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="relative h-[70vh] overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+            >
+              {items[0].imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={items[0].imageUrl} alt={items[0].title} className="h-full w-full object-cover" loading="eager" />
+              ) : (
+                <div className="h-full w-full bg-muted" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-4 p-6">
+                <div className="max-w-3xl">
+                  <p className="text-xs uppercase tracking-wide text-white/80">{items[0].category}</p>
+                  <h2 className="mt-2 text-3xl font-bold text-white">{items[0].title}</h2>
+                  <p className="mt-2 text-sm text-white/85">{items[0].summary}</p>
+                </div>
+                <Link href={`/dashboard/news/${items[0]._id}`}>
+                  <Button className="h-11">Read More</Button>
+                </Link>
+              </div>
+            </motion.article>
+          </section>
+        ) : null}
+
         <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
             <Card>
@@ -133,7 +164,7 @@ export default function DashboardPage() {
               </CardHeader>
             </Card>
           ) : (
-            items.map((item, index) => (
+            items.slice(1).map((item, index) => (
               <motion.article
                 key={item._id}
                 initial={{ opacity: 0, y: 12 }}
@@ -152,9 +183,14 @@ export default function DashboardPage() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.category}</p>
                 <h2 className="mt-2 text-lg font-semibold">{item.title}</h2>
                 <p className="mt-3 text-sm text-muted-foreground">{item.summary}</p>
-                <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-4 block text-xs text-primary hover:underline">
-                  {item.source} · {new Date(item.publishedAt).toLocaleString()}
-                </a>
+                <div className="mt-4 flex items-center justify-between">
+                  <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="block text-xs text-primary hover:underline">
+                    {item.source} · {new Date(item.publishedAt).toLocaleString()}
+                  </a>
+                  <Link href={`/dashboard/news/${item._id}`} className="text-xs text-foreground hover:underline">
+                    Read More
+                  </Link>
+                </div>
               </motion.article>
             ))
           )}

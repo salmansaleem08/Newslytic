@@ -10,13 +10,14 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(8080),
   MONGODB_URI: z.string().min(1),
   GEMINI_API_KEY: z.string().min(1),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   NEWS_API_KEY: z.string().optional(),
   GNEWS_API_KEY: z.string().optional(),
   FACTCHECK_API_KEY: z.string().optional(),
   APP_ORIGIN: z.string().default("http://localhost:3000"),
   JWT_SECRET: z.string().min(16).default("change-me-in-production"),
   LOCAL_NEWS_COUNTRY: z.string().default("us"),
-  NEWS_SYNC_INTERVAL_MINUTES: z.coerce.number().default(20)
+  NEWS_SYNC_INTERVAL_MINUTES: z.coerce.number().default(300)
 });
 
 export const env = envSchema.parse(process.env);
