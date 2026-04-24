@@ -1,8 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
 type Props = {
   title: string;
@@ -16,9 +18,9 @@ export function AuthLayout({ title, subtitle, children }: Props) {
       <div className="grid h-full grid-cols-1 lg:grid-cols-2">
         <div className="flex flex-col overflow-y-auto bg-background">
           <div className="p-8">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <div className="h-11 w-11 rounded-xl bg-primary/10 ring-1 ring-primary/30" />
-              <span className="text-xl font-bold text-foreground">Newslytic</span>
+            <Link href="/" className="inline-flex items-center gap-3">
+              <Image src="/logo.svg" alt="Newslytic logo" width={48} height={48} priority />
+              <span className="text-xl font-bold">Newslytic</span>
             </Link>
           </div>
 
@@ -46,7 +48,7 @@ export function AuthLayout({ title, subtitle, children }: Props) {
             >
               Alumni Stories
             </motion.h3>
-            <p className="text-white/60">Trusted by readers who want signal over noise.</p>
+            <p className="mt-2 text-white/60">Trusted by readers who want signal over noise.</p>
 
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="rounded-xl border border-white/10 bg-white/5 p-6">
@@ -58,6 +60,21 @@ export function AuthLayout({ title, subtitle, children }: Props) {
                 <p className="mt-1 text-white/60">Lower news overwhelm</p>
               </div>
             </div>
+
+            <Card className="border-white/10 bg-white/5 text-white shadow-none">
+              <CardHeader>
+                <CardTitle className="text-base">Trustpilot</CardTitle>
+                <CardDescription className="text-white/60">What our early users say</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p className="rounded-md border border-white/10 bg-black/15 p-3 text-white/80">
+                  &quot;I finally understand world events in 5 minutes every morning.&quot;
+                </p>
+                <p className="rounded-md border border-white/10 bg-black/15 p-3 text-white/80">
+                  &quot;Newslytic reduces noise and keeps me focused on what matters.&quot;
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

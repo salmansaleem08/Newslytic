@@ -6,6 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { API_BASE } from "../lib/api";
+import { Alert } from "./ui/alert";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { PasswordInput } from "./ui/password-input";
 
 export function LoginForm() {
   const router = useRouter();
@@ -42,28 +47,29 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className={`grid gap-5 ${loading ? "opacity-70" : ""}`}>
       <div className="space-y-2">
-        <label className="text-sm font-medium">Email</label>
-        <input
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
           required
           name="email"
           type="email"
           placeholder="m@example.com"
-          className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="h-11"
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">Password</label>
+          <Label htmlFor="password">Password</Label>
           <button type="button" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
             Forgot your password?
           </button>
         </div>
-        <input
+        <PasswordInput
+          id="password"
           required
           name="password"
-          type="password"
-          className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="h-11"
         />
       </div>
 
@@ -73,31 +79,31 @@ export function LoginForm() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="rounded-md border border-secondary/50 bg-secondary/10 p-3 text-sm text-secondary"
           >
-            {error}
+            <Alert variant="destructive" title="Sign in failed" description={error} />
           </motion.div>
         ) : null}
       </AnimatePresence>
 
-      <button
+      <Button
         disabled={loading}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        className="h-11 w-full font-medium"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {loading ? "Signing in..." : "Sign in"}
-      </button>
+      </Button>
 
-      <div className="relative text-center text-sm text-muted-foreground">
-        <span className="bg-background px-2">Or continue with</span>
+      <div className="relative text-center text-sm text-muted-foreground before:absolute before:left-0 before:top-1/2 before:h-px before:w-full before:bg-border">
+        <span className="relative bg-background px-2">Or continue with</span>
       </div>
 
-      <button
+      <Button
         type="button"
-        className="inline-flex h-11 w-full items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium shadow-xs transition hover:bg-accent hover:text-accent-foreground"
+        variant="outline"
+        className="h-11 w-full font-medium"
       >
         Single Sign-On
-      </button>
+      </Button>
 
       <p className="text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}

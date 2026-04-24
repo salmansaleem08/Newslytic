@@ -14,8 +14,7 @@ const signupSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(8),
-  phone: z.string().optional()
+  password: z.string().min(8)
 });
 
 const loginSchema = z.object({
@@ -44,12 +43,12 @@ authRouter.post("/signup", async (req, res) => {
   const parsed = signupSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid signup payload" });
 
-  const { email, password, firstName, lastName, phone } = parsed.data;
+  const { email, password, firstName, lastName } = parsed.data;
   const existing = await UserModel.findOne({ email }).lean();
   if (existing) return res.status(409).json({ error: "Email already registered" });
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await UserModel.create({ email, passwordHash, firstName, lastName, phone: phone ?? "" });
+  const user = await UserModel.create({ email, passwordHash, firstName, lastName });
   const token = signToken({ sub: String(user._id), email: user.email });
   setAuthCookie(res, token);
 

@@ -6,6 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { API_BASE } from "../lib/api";
+import { Alert } from "./ui/alert";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { PasswordInput } from "./ui/password-input";
 
 export function SignupForm() {
   const router = useRouter();
@@ -22,7 +27,6 @@ export function SignupForm() {
       firstName: String(formData.get("firstName") ?? ""),
       lastName: String(formData.get("lastName") ?? ""),
       email: String(formData.get("email") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
       password: String(formData.get("password") ?? "")
     };
 
@@ -48,55 +52,45 @@ export function SignupForm() {
     <form onSubmit={onSubmit} className={`grid gap-5 ${loading ? "opacity-70" : ""}`}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label className="text-sm font-medium">First Name</label>
-          <input
+          <Label htmlFor="firstName">First Name</Label>
+          <Input
+            id="firstName"
             required
             name="firstName"
-            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="h-11"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Last Name</label>
-          <input
+          <Label htmlFor="lastName">Last Name</Label>
+          <Input
+            id="lastName"
             required
             name="lastName"
-            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="h-11"
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Email</label>
-        <input
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
           required
           name="email"
           type="email"
           placeholder="m@example.com"
-          className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="h-11"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          Phone Number <span className="text-xs text-muted-foreground">Detected: +92</span>
-        </label>
-        <input
-          required
-          name="phone"
-          type="tel"
-          placeholder="123 456 7890"
-          className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Password</label>
-        <input
+        <Label htmlFor="password">Password</Label>
+        <PasswordInput
+          id="password"
           required
           name="password"
-          type="password"
           minLength={8}
-          className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="h-11"
         />
       </div>
 
@@ -106,20 +100,19 @@ export function SignupForm() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="rounded-md border border-secondary/50 bg-secondary/10 p-3 text-sm text-secondary"
           >
-            {error}
+            <Alert variant="destructive" title="Signup failed" description={error} />
           </motion.div>
         ) : null}
       </AnimatePresence>
 
-      <button
+      <Button
         disabled={loading}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        className="h-11 w-full font-medium"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {loading ? "Creating account..." : "Create account"}
-      </button>
+      </Button>
 
       <p className="text-sm text-muted-foreground">
         Already have an account?{" "}

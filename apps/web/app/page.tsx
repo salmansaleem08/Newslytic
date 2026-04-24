@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
 
 export default function Home() {
   return (
@@ -12,41 +14,41 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium shadow-xs transition hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex"
             >
-              Sign in
+              <Button variant="outline">Sign in</Button>
             </Link>
             <Link
               href="/signup"
-              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+              className="inline-flex"
             >
-              Get started
+              <Button>Get started</Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
-        <section className="rounded-xl border border-border bg-card p-8 shadow-sm">
-          <h1 className="text-4xl font-bold leading-tight">News that moves your day forward</h1>
-          <p className="mt-2 text-muted-foreground">
-            Personalized briefings, trust signals, and rapid context so you stay informed without overload.
-          </p>
-          <div className="mt-6 flex gap-3">
-            <Link
-              href="/signup"
-              className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-            >
-              Create account
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
+        <Card className="relative overflow-hidden">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-16 left-20 h-44 w-44 rounded-full bg-secondary/10 blur-2xl" />
+          <CardHeader>
+            <CardTitle className="text-4xl leading-tight">News that moves your day forward</CardTitle>
+            <CardDescription className="max-w-2xl text-base">
+              Personalized briefings, trust signals, and rapid context so you stay informed without overload.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3">
+            <Link href="/signup">
+              <Button className="h-11 px-6">Create account</Button>
             </Link>
-            <Link
-              href="/login"
-              className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-6 text-sm font-medium shadow-xs transition hover:bg-accent hover:text-accent-foreground"
-            >
-              Sign in
+            <Link href="/login">
+              <Button variant="outline" className="h-11 px-6">
+                Sign in
+              </Button>
             </Link>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[
@@ -54,10 +56,12 @@ export default function Home() {
             ["Truth-Check Assistant", "Quick credibility checks for headlines and claims."],
             ["What You Missed", "Catch important updates since your last visit in seconds."]
           ].map(([title, desc]) => (
-            <article key={title} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">{title}</h2>
-              <p className="mt-3 text-sm text-muted-foreground">{desc}</p>
-            </article>
+            <Card key={title}>
+              <CardHeader>
+                <CardTitle className="text-lg">{title}</CardTitle>
+                <CardDescription>{desc}</CardDescription>
+              </CardHeader>
+            </Card>
           ))}
         </section>
       </main>
