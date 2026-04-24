@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Manrope } from "next/font/google";
+import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -9,6 +9,11 @@ const manrope = Manrope({
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
@@ -25,9 +30,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-background font-sans text-foreground">{children}</body>
     </html>
   );
 }
