@@ -1,15 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "../../components/app-header";
 import { Button } from "../../components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { API_BASE, type AuthUser } from "../../lib/api";
-
-const FEED_CATEGORIES = ["all", "global", "local", "politics", "technology", "business", "entertainment", "sports"] as const;
-type FeedCategory = (typeof FEED_CATEGORIES)[number];
+import { Card, CardDescription, CardHeader } from "../../components/ui/card";
+import { API_BASE } from "../../lib/api";
 
 type NewsItem = {
   _id: string;
@@ -18,32 +15,19 @@ type NewsItem = {
   source: string;
   sourceUrl: string;
   imageUrl?: string;
-  relevanceScore?: number;
   publishedAt: string;
-  category: FeedCategory;
+  category: string;
 };
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<FeedCategory>("all");
-  const [syncing, setSyncing] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  async function loadFeed(category: FeedCategory, refresh = false): Promise<void> {
-    setSyncing(true);
-    const params = new URLSearchParams({
-      category,
-      limit: "15",
-      refresh: refresh ? "1" : "0"
-    });
-    try {
-      const newsRes = await fetch(`${API_BASE}/api/news/feed?${params.toString()}`, { cache: "no-store" });
-      const newsData = (await newsRes.json().catch(() => ({ items: [] }))) as { items?: NewsItem[] };
-      setItems(newsData.items ?? []);
-    } finally {
-      setSyncing(false);
-    }
+  async function loadFeed(): Promise<void> {
+    const newsRes = await fetch(`${API_BASE}/api/news/feed?category=all&limit=15&refresh=0`, { cache: "no-store" });
+    const newsData = (await newsRes.json().catch(() => ({ items: [] }))) as { items?: NewsItem[] };
+    setItems(newsData.items ?? []);
   }
 
   useEffect(() => {
@@ -53,10 +37,7 @@ export default function DashboardPage() {
         window.location.href = "/login";
         return;
       }
-      const meData = (await meRes.json()) as { user: AuthUser };
-      setUser(meData.user);
-
-      await loadFeed("all");
+      await loadFeed();
       setLoading(false);
     }
     load().catch(() => {
@@ -64,93 +45,56 @@ export default function DashboardPage() {
     });
   }, []);
 
-  async function logout() {
-    await fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" });
-    window.location.href = "/login";
-  }
+  const activeItem = useMemo(() => {
+    if (items.length === 0) return null;
+    return items[currentIndex % items.length];
+  }, [items, currentIndex]);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % items.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [items.length]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader
-        rightSlot={
-          <Button variant="outline" onClick={logout}>
-            Logout
-          </Button>
-        }
-      />
-      <main className="w-full px-6 py-8">
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="rounded-xl border border-border bg-card p-2 shadow-sm"
-        >
-          <Card className="border-0 bg-transparent shadow-none">
-            <CardHeader>
-              <CardTitle className="text-3xl">Your Smart Feed</CardTitle>
-              <CardDescription className="text-base">
-                Verified summaries and signal-first updates crafted for founder-level decision speed.
-              </CardDescription>
-              {user ? <CardDescription>Welcome {user.firstName}.</CardDescription> : null}
-            </CardHeader>
-          </Card>
-        </motion.section>
-
-        <section className="mt-6 flex flex-wrap items-center gap-2">
-          {FEED_CATEGORIES.map((category) => (
-            <Button
-              key={category}
-              variant={activeCategory === category ? "default" : "outline"}
-              onClick={() => {
-                setActiveCategory(category);
-                void loadFeed(category);
-              }}
-              className="capitalize"
-            >
-              {category}
-            </Button>
-          ))}
-          <Button
-            variant="outline"
-            onClick={() => void loadFeed(activeCategory, true)}
-            className="ml-auto"
-            disabled={syncing}
-          >
-            {syncing ? "Refreshing..." : "Refresh feed"}
-          </Button>
+      <AppHeader />
+      <main className="w-full">
+        <section className="relative h-[calc(100vh-64px)] w-full overflow-hidden">
+          <AnimatePresence mode="wait">
+            {activeItem ? (
+              <motion.article
+                key={activeItem._id}
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
+                className="absolute inset-0"
+              >
+                {activeItem.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={activeItem.imageUrl} alt={activeItem.title} className="h-full w-full object-cover" loading="eager" />
+                ) : (
+                  <div className="h-full w-full bg-muted" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-4 p-8">
+                  <div className="max-w-3xl">
+                    <h2 className="text-4xl font-bold leading-tight text-white">{activeItem.title}</h2>
+                    <p className="mt-3 text-base text-white/90">{activeItem.summary}</p>
+                  </div>
+                  <Link href={`/dashboard/news/${activeItem._id}`}>
+                    <Button className="h-11 shrink-0">Read More</Button>
+                  </Link>
+                </div>
+              </motion.article>
+            ) : null}
+          </AnimatePresence>
         </section>
 
-        {items.length > 0 ? (
-          <section className="mt-6">
-            <motion.article
-              key={items[0]._id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
-              className="relative h-[70vh] overflow-hidden rounded-xl border border-border bg-card shadow-sm"
-            >
-              {items[0].imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={items[0].imageUrl} alt={items[0].title} className="h-full w-full object-cover" loading="eager" />
-              ) : (
-                <div className="h-full w-full bg-muted" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-4 p-6">
-                <div className="max-w-3xl">
-                  <p className="text-xs uppercase tracking-wide text-white/80">{items[0].category}</p>
-                  <h2 className="mt-2 text-3xl font-bold text-white">{items[0].title}</h2>
-                  <p className="mt-2 text-sm text-white/85">{items[0].summary}</p>
-                </div>
-                <Link href={`/dashboard/news/${items[0]._id}`}>
-                  <Button className="h-11">Read More</Button>
-                </Link>
-              </div>
-            </motion.article>
-          </section>
-        ) : null}
-
-        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid gap-4 px-6 py-8 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
             <Card>
               <CardHeader>
@@ -164,7 +108,7 @@ export default function DashboardPage() {
               </CardHeader>
             </Card>
           ) : (
-            items.slice(1).map((item, index) => (
+            items.map((item, index) => (
               <motion.article
                 key={item._id}
                 initial={{ opacity: 0, y: 12 }}
