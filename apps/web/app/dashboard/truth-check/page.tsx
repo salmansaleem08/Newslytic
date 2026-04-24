@@ -87,14 +87,15 @@ export default function TruthCheckPage() {
         setMessages((prev) => [...prev, { id: createMessageId(), role: "bot", text: data.error ?? "I could not verify that claim right now.", replyToId: questionId }]);
         return;
       }
+      const result = data.result;
 
       setMessages((prev) => [
         ...prev,
         {
           id: createMessageId(),
           role: "bot",
-          text: sanitizeDisplayText(data.result.summary),
-          result: data.result,
+          text: sanitizeDisplayText(result.summary),
+          result,
           replyToId: questionId
         }
       ]);
@@ -105,7 +106,10 @@ export default function TruthCheckPage() {
     }
   }
 
-  const latestResult = [...messages].reverse().find((msg) => msg.role === "bot" && msg.result)?.result;
+  const latestBotWithResult = [...messages].reverse().find(
+    (msg): msg is Extract<Message, { role: "bot" }> => msg.role === "bot" && Boolean(msg.result)
+  );
+  const latestResult = latestBotWithResult?.result;
   const cleanedSummary = latestResult ? sanitizeDisplayText(latestResult.summary) : "";
   const totalGraph =
     (latestResult?.graph.supports ?? 0) +
