@@ -31,13 +31,13 @@ newsRouter.get("/feed", async (req, res) => {
 
   const dayKey = new Date().toISOString().slice(0, 10);
   const query = category === "all" ? { dayKey } : { dayKey, category };
-  const items = await NewsItemModel.find(query).sort({ relevanceScore: -1, publishedAt: -1 }).limit(limit).lean();
+  const items = await NewsItemModel.find(query).sort({ publishedAt: -1, relevanceScore: -1 }).limit(limit).lean();
   res.json({ dayKey, items, categories: NEWS_CATEGORIES });
 });
 
 newsRouter.get("/today", async (_req, res) => {
   const dayKey = getDayKey();
-  const items = await NewsItemModel.find({ dayKey }).sort({ relevanceScore: -1, publishedAt: -1 }).limit(15).lean();
+  const items = await NewsItemModel.find({ dayKey }).sort({ publishedAt: -1, relevanceScore: -1 }).limit(15).lean();
   res.json({ dayKey, items, categories: NEWS_CATEGORIES });
 });
 
@@ -101,7 +101,7 @@ newsRouter.post("/:newsId/thoughts", async (req, res) => {
   const thought = await NewsThoughtModel.create({
     newsItemId: req.params.newsId,
     authorName: `${user.firstName} ${user.lastName}`.trim(),
-    authorAvatar: "",
+    authorAvatar: user.avatarUrl ?? "",
     content: parsed.data.content
   });
 

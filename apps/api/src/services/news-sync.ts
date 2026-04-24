@@ -34,17 +34,6 @@ async function markSynced(): Promise<void> {
   );
 }
 
-async function enforceDailyCap(dayKey: string, maxItems = 15): Promise<void> {
-  const docs = await NewsItemModel.find({ dayKey })
-    .sort({ relevanceScore: -1, publishedAt: -1 })
-    .select({ _id: 1 })
-    .lean();
-
-  if (docs.length <= maxItems) return;
-  const removeIds = docs.slice(maxItems).map((doc) => doc._id);
-  await NewsItemModel.deleteMany({ _id: { $in: removeIds } });
-}
-
 type ProviderArticle = {
   title: string;
   description: string;
@@ -207,7 +196,6 @@ export async function runNewsSync(options: SyncOptions = {}): Promise<{ inserted
     }
   }
 
-  await enforceDailyCap(dayKey, 15);
   await pruneOldDays();
   await markSynced();
 

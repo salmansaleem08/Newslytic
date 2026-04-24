@@ -17,7 +17,10 @@ const envSchema = z.object({
   APP_ORIGIN: z.string().default("http://localhost:3000"),
   JWT_SECRET: z.string().min(16).default("change-me-in-production"),
   LOCAL_NEWS_COUNTRY: z.string().default("us"),
-  NEWS_SYNC_INTERVAL_MINUTES: z.coerce.number().default(300)
+  NEWS_SYNC_INTERVAL_MINUTES: z.coerce.number().default(240),
+  TTS_PYTHON_BIN: z.string().default("python"),
+  TTS_PYTHON_BIN_NEWS_CASTER: z.string().optional(),
+  TTS_VOICE: z.string().default("en-US-ChristopherNeural")
 });
 
 export const env = envSchema.parse(process.env);

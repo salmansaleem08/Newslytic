@@ -34,8 +34,8 @@ app.use("/media/news-caster", express.static(path.resolve(process.cwd(), "storag
 async function bootstrap() {
   await connectDb();
 
-  // Runs every 5 hours to protect provider API limits.
-  cron.schedule("0 */5 * * *", async () => {
+  // Runs every 4 hours.
+  cron.schedule("0 */4 * * *", async () => {
     try {
       await runNewsSync();
     } catch (error) {

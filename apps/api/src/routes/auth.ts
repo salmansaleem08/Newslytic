@@ -22,6 +22,14 @@ const loginSchema = z.object({
   password: z.string().min(8)
 });
 
+const updateProfileSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  bio: z.string().max(240).optional(),
+  avatarUrl: z.string().max(200000).optional(),
+  theme: z.enum(["light", "dark"]).optional()
+});
+
 function signToken(payload: TokenPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: "7d" });
 }
@@ -85,7 +93,44 @@ authRouter.get("/me", async (req, res) => {
     const user = await UserModel.findById(payload.sub).lean();
     if (!user) return res.status(401).json({ error: "Unauthorized" });
     return res.json({
-      user: { id: String(user._id), email: user.email, firstName: user.firstName, lastName: user.lastName }
+      user: {
+        id: String(user._id),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        bio: user.bio ?? "",
+        avatarUrl: user.avatarUrl ?? "",
+        theme: user.theme ?? "light"
+      }
+    });
+  } catch {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+});
+
+authRouter.patch("/me", async (req, res) => {
+  const token = readToken(req);
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid profile payload" });
+
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+    const updates = parsed.data;
+    const user = await UserModel.findByIdAndUpdate(payload.sub, updates, { new: true }).lean();
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    return res.json({
+      user: {
+        id: String(user._id),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        bio: user.bio ?? "",
+        avatarUrl: user.avatarUrl ?? "",
+        theme: user.theme ?? "light"
+      }
     });
   } catch {
     return res.status(401).json({ error: "Unauthorized" });

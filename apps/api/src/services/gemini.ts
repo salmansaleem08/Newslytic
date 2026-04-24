@@ -208,8 +208,15 @@ export async function analyzeNewsSignals(payload: {
 }
 
 export async function decideTrendPredictions(payload: {
-  candidates: Array<{ topic: string; freqToday: number; freqYesterday: number; growthScore: number }>;
-}): Promise<Array<{ topic: string; confidence: number; rationale: string }>> {
+  candidates: Array<{
+    sector: string;
+    topic: string;
+    freqToday: number;
+    freqYesterday: number;
+    growthScore: number;
+    sentimentScore: number;
+  }>;
+}): Promise<Array<{ sector: string; topic: string; outlook: string; confidence: number; rationale: string; impactArea: string; horizon: string }>> {
   if (payload.candidates.length === 0) return [];
 
   try {
@@ -221,10 +228,12 @@ export async function decideTrendPredictions(payload: {
           parts: [
             {
               text: [
-                "You are a trend analyst.",
-                "Pick up to 5 strongest future-trending topics from the candidates.",
-                "Return strict JSON array only with items: {topic, confidence, rationale}.",
+                "You are a market and culture trend analyst.",
+                "Pick up to 6 strongest future-trending sectors from the candidates.",
+                "Return strict JSON array only with items: {sector, topic, outlook, confidence, rationale, impactArea, horizon}.",
+                "outlook must be one of: Upward, Downward, Watch.",
                 "Confidence must be 0-100 integer.",
+                "Use actionable language useful for normal users (e.g., stocks may rise, crypto may cool, fashion style may spread).",
                 "",
                 JSON.stringify(payload.candidates, null, 2)
               ].join("\n")
@@ -236,14 +245,26 @@ export async function decideTrendPredictions(payload: {
     const text = response.text ?? "";
     const arrCandidate = text.match(/\[[\s\S]*\]/)?.[0] ?? "";
     if (!arrCandidate) return [];
-    const parsed = JSON.parse(arrCandidate) as Array<{ topic?: string; confidence?: number; rationale?: string }>;
+    const parsed = JSON.parse(arrCandidate) as Array<{
+      sector?: string;
+      topic?: string;
+      outlook?: string;
+      confidence?: number;
+      rationale?: string;
+      impactArea?: string;
+      horizon?: string;
+    }>;
     return parsed
       .filter((item) => Boolean(item.topic))
-      .slice(0, 5)
+      .slice(0, 6)
       .map((item) => ({
+        sector: String(item.sector ?? "General"),
         topic: String(item.topic),
+        outlook: ["Upward", "Downward", "Watch"].includes(String(item.outlook)) ? String(item.outlook) : "Watch",
         confidence: Math.max(0, Math.min(100, Math.round(Number(item.confidence ?? 60)))),
-        rationale: String(item.rationale ?? "Rising mention frequency suggests growing attention.")
+        rationale: String(item.rationale ?? "Rising mention frequency suggests growing attention."),
+        impactArea: String(item.impactArea ?? "General market attention"),
+        horizon: String(item.horizon ?? "next 24-72h")
       }));
   } catch (error) {
     console.error("Gemini trend decision failed:", error);
