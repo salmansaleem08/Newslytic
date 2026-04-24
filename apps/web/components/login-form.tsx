@@ -26,22 +26,26 @@ export function LoginForm() {
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
 
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email, password })
-    });
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password })
+      });
 
-    setLoading(false);
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Unable to login");
+        return;
+      }
 
-    if (!response.ok) {
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      setError(data.error ?? "Unable to login");
-      return;
+      router.push("/dashboard");
+    } catch {
+      setError("Unable to reach server. Please make sure backend is running.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
   }
 
   return (

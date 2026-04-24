@@ -27,30 +27,7 @@ const features = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-          <div>
-            <p className="text-xl font-bold">Newslytic</p>
-            <p className="text-sm text-muted-foreground">Stay ahead of the curve, not under the noise.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="inline-flex"
-            >
-              <Button variant="outline">Sign in</Button>
-            </Link>
-            <Link
-              href="/signup"
-              className="inline-flex"
-            >
-              <Button>Get started</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="relative mx-auto flex w-full max-w-6xl flex-col gap-10 overflow-hidden px-6 py-10">
+      <main className="relative flex w-full flex-col gap-10 overflow-hidden py-14 md:py-16">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -64,7 +41,7 @@ export default function Home() {
           className="pointer-events-none absolute -right-20 top-28 h-72 w-72 rounded-full bg-secondary/15 blur-3xl"
         />
 
-        <section className="grid items-center gap-6 lg:grid-cols-2">
+        <section className="grid items-center gap-6 px-6 lg:grid-cols-2 lg:px-10 xl:px-14">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -130,7 +107,7 @@ export default function Home() {
           </motion.div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid gap-4 px-6 pb-2 md:grid-cols-2 lg:px-10 xl:grid-cols-3 xl:px-14">
           {features.map((feature, index) => (
             <motion.div
               key={feature.title}

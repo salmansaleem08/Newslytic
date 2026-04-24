@@ -6,19 +6,40 @@ import { Button } from "../../components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { API_BASE, type AuthUser } from "../../lib/api";
 
+const FEED_CATEGORIES = ["all", "global", "local", "politics", "technology", "business", "entertainment", "sports"] as const;
+type FeedCategory = (typeof FEED_CATEGORIES)[number];
+
 type NewsItem = {
   _id: string;
   title: string;
   summary: string;
   source: string;
+  sourceUrl: string;
+  imageUrl?: string;
+  relevanceScore?: number;
   publishedAt: string;
-  category: "global" | "local";
+  category: FeedCategory;
 };
 
 export default function DashboardPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<FeedCategory>("all");
+  const [syncing, setSyncing] = useState(false);
+
+  async function loadFeed(category: FeedCategory, refresh = false): Promise<void> {
+    setSyncing(true);
+    const params = new URLSearchParams({
+      category,
+      limit: "15",
+      refresh: refresh ? "1" : "0"
+    });
+    const newsRes = await fetch(`${API_BASE}/api/news/feed?${params.toString()}`, { cache: "no-store" });
+    const newsData = (await newsRes.json().catch(() => ({ items: [] }))) as { items?: NewsItem[] };
+    setItems(newsData.items ?? []);
+    setSyncing(false);
+  }
 
   useEffect(() => {
     async function load() {
@@ -30,9 +51,7 @@ export default function DashboardPage() {
       const meData = (await meRes.json()) as { user: AuthUser };
       setUser(meData.user);
 
-      const newsRes = await fetch(`${API_BASE}/api/news/today`, { cache: "no-store" });
-      const newsData = (await newsRes.json().catch(() => ({ items: [] }))) as { items?: NewsItem[] };
-      setItems(newsData.items ?? []);
+      await loadFeed("all");
       setLoading(false);
     }
     load().catch(() => {
@@ -76,6 +95,30 @@ export default function DashboardPage() {
           </Card>
         </motion.section>
 
+        <section className="mt-6 flex flex-wrap items-center gap-2">
+          {FEED_CATEGORIES.map((category) => (
+            <Button
+              key={category}
+              variant={activeCategory === category ? "default" : "outline"}
+              onClick={() => {
+                setActiveCategory(category);
+                void loadFeed(category);
+              }}
+              className="capitalize"
+            >
+              {category}
+            </Button>
+          ))}
+          <Button
+            variant="outline"
+            onClick={() => void loadFeed(activeCategory, true)}
+            className="ml-auto"
+            disabled={syncing}
+          >
+            {syncing ? "Refreshing..." : "Refresh feed"}
+          </Button>
+        </section>
+
         <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
             <Card>
@@ -98,12 +141,20 @@ export default function DashboardPage() {
                 transition={{ delay: index * 0.05, duration: 0.45 }}
                 className="rounded-xl border border-border bg-card p-6 shadow-sm hover:-translate-y-0.5"
               >
+                <div className="relative mb-3 h-40 overflow-hidden rounded-md border border-border bg-muted">
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No image available</div>
+                  )}
+                </div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.category}</p>
                 <h2 className="mt-2 text-lg font-semibold">{item.title}</h2>
                 <p className="mt-3 text-sm text-muted-foreground">{item.summary}</p>
-                <p className="mt-4 text-xs text-muted-foreground">
+                <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-4 block text-xs text-primary hover:underline">
                   {item.source} · {new Date(item.publishedAt).toLocaleString()}
-                </p>
+                </a>
               </motion.article>
             ))
           )}

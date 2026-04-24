@@ -30,22 +30,26 @@ export function SignupForm() {
       password: String(formData.get("password") ?? "")
     };
 
-    const response = await fetch(`${API_BASE}/api/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload)
-    });
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
 
-    setLoading(false);
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Unable to create account");
+        return;
+      }
 
-    if (!response.ok) {
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      setError(data.error ?? "Unable to create account");
-      return;
+      router.push("/dashboard");
+    } catch {
+      setError("Unable to reach server. Please make sure backend is running.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
   }
 
   return (
