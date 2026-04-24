@@ -14,8 +14,23 @@ import { truthCheckRouter } from "./routes/truth-check.js";
 import { runNewsSync } from "./services/news-sync.js";
 
 const app = express();
+const configuredOrigins = [
+  env.APP_ORIGIN,
+  ...(env.APP_ORIGINS ? env.APP_ORIGINS.split(",").map((value) => value.trim()).filter(Boolean) : [])
+];
 
-app.use(cors({ origin: env.APP_ORIGIN, credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (configuredOrigins.includes(origin)) return callback(null, true);
+      // Allow Vercel preview deployments without manually adding each URL.
+      if (/^https:\/\/.+\.vercel\.app$/i.test(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true
+  })
+);
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 

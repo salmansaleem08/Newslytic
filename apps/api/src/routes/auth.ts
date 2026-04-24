@@ -34,13 +34,18 @@ function signToken(payload: TokenPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: "7d" });
 }
 
-function setAuthCookie(res: Response, token: string): void {
-  res.cookie("newslytic_token", token, {
+function getCookieOptions() {
+  return {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
+    sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    domain: env.COOKIE_DOMAIN
+  };
+}
+
+function setAuthCookie(res: Response, token: string): void {
+  res.cookie("newslytic_token", token, getCookieOptions());
 }
 
 function readToken(req: Request): string | null {
@@ -138,7 +143,12 @@ authRouter.patch("/me", async (req, res) => {
 });
 
 authRouter.post("/logout", (_req, res) => {
-  res.clearCookie("newslytic_token");
+  res.clearCookie("newslytic_token", {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
+    domain: env.COOKIE_DOMAIN
+  });
   return res.json({ ok: true });
 });
 

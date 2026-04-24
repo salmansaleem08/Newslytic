@@ -15,6 +15,8 @@ const envSchema = z.object({
   GNEWS_API_KEY: z.string().optional(),
   FACTCHECK_API_KEY: z.string().optional(),
   APP_ORIGIN: z.string().default("http://localhost:3000"),
+  APP_ORIGINS: z.string().optional(),
+  COOKIE_DOMAIN: z.string().optional(),
   JWT_SECRET: z.string().min(16).default("change-me-in-production"),
   LOCAL_NEWS_COUNTRY: z.string().default("us"),
   NEWS_SYNC_INTERVAL_MINUTES: z.coerce.number().default(240),
