@@ -5,6 +5,9 @@ export type AuthUser = {
   email: string;
   firstName: string;
   lastName: string;
+  bio?: string;
+  avatarUrl?: string;
+  theme?: "light" | "dark";
 };
 
 export async function fetchMe(): Promise<AuthUser | null> {

@@ -21,6 +21,7 @@ type LocalProfile = {
 };
 
 const PROFILE_KEY = "newslytic.profile";
+const THEME_KEY = "newslytic.theme";
 
 function getInitialTheme(): ThemeChoice {
   if (typeof window === "undefined") return "light";
@@ -58,9 +59,9 @@ export default function SettingsPage() {
       setFirstName(me.firstName ?? "");
       setLastName(me.lastName ?? "");
       setEmail(me.email ?? "");
-      setBio(local?.bio ?? "");
-      setAvatarUrl(local?.avatarUrl ?? "");
-      setTheme(local?.theme ?? getInitialTheme());
+      setBio(local?.bio ?? me.bio ?? "");
+      setAvatarUrl(local?.avatarUrl ?? me.avatarUrl ?? "");
+      setTheme(local?.theme ?? localStorage.getItem(THEME_KEY) as ThemeChoice ?? me.theme ?? getInitialTheme());
       setLoading(false);
     }
 
@@ -72,6 +73,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
   const initials = useMemo(() => {
@@ -105,7 +107,7 @@ export default function SettingsPage() {
       if (response.ok) {
         setMessage("Profile saved successfully.");
       } else {
-        setMessage("Saved locally. Server profile update endpoint is unavailable.");
+        setMessage("Saved locally. Server update failed.");
       }
     } catch {
       setMessage("Saved locally. Could not reach the server.");

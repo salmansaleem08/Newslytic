@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, Trash2 } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { AppHeader } from "../../../components/app-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -30,8 +30,8 @@ type VerifyResult = {
 };
 
 type Message =
-  | { role: "user"; text: string }
-  | { role: "bot"; text: string; result?: VerifyResult };
+  | { id: string; role: "user"; text: string }
+  | { id: string; role: "bot"; text: string; result?: VerifyResult; replyToId?: string };
 
 function sanitizeDisplayText(input: string): string {
   return input
@@ -52,17 +52,27 @@ export default function TruthCheckPage() {
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
+      id: "welcome",
       role: "bot",
       text: "Send any headline or claim, and I will verify it against fact-check sources then summarize with AI."
     }
   ]);
+
+  function createMessageId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function removeQuestion(questionId: string) {
+    setMessages((prev) => prev.filter((message) => message.id !== questionId && ("replyToId" in message ? message.replyToId !== questionId : true)));
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextClaim = claim.trim();
     if (!nextClaim) return;
 
-    setMessages((prev) => [...prev, { role: "user", text: nextClaim }]);
+    const questionId = createMessageId();
+    setMessages((prev) => [...prev, { id: questionId, role: "user", text: nextClaim }]);
     setClaim("");
     setLoading(true);
 
@@ -74,20 +84,22 @@ export default function TruthCheckPage() {
       });
       const data = (await response.json().catch(() => ({}))) as { result?: VerifyResult; error?: string };
       if (!response.ok || !data.result) {
-        setMessages((prev) => [...prev, { role: "bot", text: data.error ?? "I could not verify that claim right now." }]);
+        setMessages((prev) => [...prev, { id: createMessageId(), role: "bot", text: data.error ?? "I could not verify that claim right now.", replyToId: questionId }]);
         return;
       }
 
       setMessages((prev) => [
         ...prev,
         {
+          id: createMessageId(),
           role: "bot",
           text: sanitizeDisplayText(data.result.summary),
-          result: data.result
+          result: data.result,
+          replyToId: questionId
         }
       ]);
     } catch {
-      setMessages((prev) => [...prev, { role: "bot", text: "Network issue: unable to verify right now." }]);
+      setMessages((prev) => [...prev, { id: createMessageId(), role: "bot", text: "Network issue: unable to verify right now.", replyToId: questionId }]);
     } finally {
       setLoading(false);
     }
@@ -104,14 +116,14 @@ export default function TruthCheckPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
-      <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-        <Card className="min-h-[70vh]">
+      <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:min-h-[calc(100vh-var(--header-height)-1.5rem)] lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+        <Card className="min-h-[78vh] lg:h-[calc(100vh-var(--header-height)-1.5rem)]">
           <CardHeader>
             <CardTitle>Truth-Check Chatbot</CardTitle>
             <CardDescription>Verify any headline or claim with cached fact-check evidence and AI summary.</CardDescription>
           </CardHeader>
           <CardContent className="flex h-full flex-col gap-4">
-            <div className="flex-1 space-y-3 overflow-y-auto rounded-md border border-border bg-muted/20 p-3">
+            <div className="flex-1 space-y-3 overflow-y-auto rounded-md border border-border bg-muted/20 p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:min-h-0">
               {messages.map((message, idx) => (
                 <div
                   key={`${message.role}-${idx}`}
@@ -119,7 +131,20 @@ export default function TruthCheckPage() {
                     message.role === "user" ? "ml-auto bg-primary text-primary-foreground" : "border border-border bg-card text-card-foreground"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{sanitizeDisplayText(message.text)}</p>
+                  <div className="flex items-start gap-2">
+                    <p className="flex-1 whitespace-pre-wrap">{sanitizeDisplayText(message.text)}</p>
+                    {message.role === "user" ? (
+                      <button
+                        type="button"
+                        onClick={() => removeQuestion(message.id)}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-primary-foreground/80 transition hover:bg-primary-foreground/20 hover:text-primary-foreground"
+                        aria-label="Delete question"
+                        title="Delete question"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ))}
               {loading ? (
@@ -130,7 +155,7 @@ export default function TruthCheckPage() {
               ) : null}
             </div>
 
-            <form onSubmit={onSubmit} className="flex items-center gap-2">
+            <form onSubmit={onSubmit} className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
               <input
                 value={claim}
                 onChange={(event) => setClaim(event.target.value)}

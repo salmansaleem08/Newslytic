@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "../../components/app-header";
@@ -59,6 +60,16 @@ export default function DashboardPage() {
     return () => window.clearInterval(timer);
   }, [items.length]);
 
+  function goPrev() {
+    if (items.length <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
+  }
+
+  function goNext() {
+    if (items.length <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % items.length);
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader
@@ -67,6 +78,30 @@ export default function DashboardPage() {
       />
       <main className="w-full">
         <section className="relative h-screen w-full overflow-hidden">
+          {items.length > 1 ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={goPrev}
+                className="absolute left-3 top-1/2 z-30 h-10 w-10 -translate-y-1/2 border-white/35 bg-black/35 text-white hover:bg-black/55 sm:left-6"
+                aria-label="Previous news"
+              >
+                <ChevronLeft />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={goNext}
+                className="absolute right-3 top-1/2 z-30 h-10 w-10 -translate-y-1/2 border-white/35 bg-black/35 text-white hover:bg-black/55 sm:right-6"
+                aria-label="Next news"
+              >
+                <ChevronRight />
+              </Button>
+            </>
+          ) : null}
           {loading ? (
             <div className="absolute inset-0">
               <Skeleton className="h-full w-full rounded-none" />

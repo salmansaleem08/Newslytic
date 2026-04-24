@@ -30,9 +30,35 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${manrope.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background font-sans text-foreground">{children}</body>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function () {
+              try {
+                var savedTheme = localStorage.getItem("newslytic.theme");
+                if (!savedTheme) {
+                  var profileRaw = localStorage.getItem("newslytic.profile");
+                  if (profileRaw) {
+                    var parsed = JSON.parse(profileRaw);
+                    savedTheme = parsed && parsed.theme ? parsed.theme : null;
+                  }
+                }
+                if (savedTheme === "dark") {
+                  document.documentElement.classList.add("dark");
+                } else {
+                  document.documentElement.classList.remove("dark");
+                }
+              } catch (_e) {}
+            })();`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
+        {children}
+      </body>
     </html>
   );
 }
