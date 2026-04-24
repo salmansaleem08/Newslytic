@@ -1,0 +1,23 @@
+{
+  "name": "newslytic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Newslytic monorepo (web + api)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
+    "dev:web": "npm run dev -w web",
+    "dev:api": "npm run dev -w api",
+    "build": "npm run build -w web && npm run build -w api",
+    "lint": "npm run lint -w web && npm run lint -w api",
+    "start": "npm run start -w web"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+apps/*/node_modules/
+
+# envs
+.env
+.env.*
+!.env.example
+
+# builds
+dist/
+.next/
+coverage/
+
+# logs
+*.log
+npm-debug.log*
+
+# system
+.DS_Store
+Thumbs.db
