@@ -1,26 +1,6 @@
-type NewsItem = {
-  _id: string;
-  title: string;
-  summary: string;
-  source: string;
-  category: "global" | "local";
-  publishedAt: string;
-};
+import Link from "next/link";
 
-async function getTodayNews(): Promise<NewsItem[]> {
-  try {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-    const response = await fetch(`${apiBase}/api/news/today`, { cache: "no-store" });
-    if (!response.ok) return [];
-    const data = (await response.json()) as { items?: NewsItem[] };
-    return data.items ?? [];
-  } catch {
-    return [];
-  }
-}
-
-export default async function Home() {
-  const items = await getTodayNews();
+export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
@@ -29,40 +9,56 @@ export default async function Home() {
             <p className="text-xl font-bold">Newslytic</p>
             <p className="text-sm text-muted-foreground">Stay ahead of the curve, not under the noise.</p>
           </div>
-          <button className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90">
-            Sign in
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium shadow-xs transition hover:bg-accent hover:text-accent-foreground"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            >
+              Get started
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
-        <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h1 className="text-3xl font-bold">Smart News Feed</h1>
+        <section className="rounded-xl border border-border bg-card p-8 shadow-sm">
+          <h1 className="text-4xl font-bold leading-tight">News that moves your day forward</h1>
           <p className="mt-2 text-muted-foreground">
-            Daily curated updates with AI summaries and incremental refresh.
+            Personalized briefings, trust signals, and rapid context so you stay informed without overload.
           </p>
+          <div className="mt-6 flex gap-3">
+            <Link
+              href="/signup"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            >
+              Create account
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-6 text-sm font-medium shadow-xs transition hover:bg-accent hover:text-accent-foreground"
+            >
+              Sign in
+            </Link>
+          </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {items.length === 0 ? (
-            <article className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">No synced news yet</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Configure API keys and run the backend sync process to populate today&apos;s feed.
-              </p>
+          {[
+            ["Smart News Feed", "Top stories updated throughout the day with concise summaries."],
+            ["Truth-Check Assistant", "Quick credibility checks for headlines and claims."],
+            ["What You Missed", "Catch important updates since your last visit in seconds."]
+          ].map(([title, desc]) => (
+            <article key={title} className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <h2 className="text-lg font-semibold">{title}</h2>
+              <p className="mt-3 text-sm text-muted-foreground">{desc}</p>
             </article>
-          ) : (
-            items.map((item) => (
-              <article key={item._id} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.category}</p>
-                <h2 className="mt-2 text-lg font-semibold">{item.title}</h2>
-                <p className="mt-3 text-sm text-muted-foreground">{item.summary}</p>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  {item.source} · {new Date(item.publishedAt).toLocaleString()}
-                </p>
-              </article>
-            ))
-          )}
+          ))}
         </section>
       </main>
     </div>
