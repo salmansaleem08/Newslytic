@@ -21,7 +21,7 @@ export function AppHeader({ rightSlot }: Props) {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-primary/40 bg-primary text-primary-foreground">
+    <header className="sticky top-0 z-40 border-b border-border bg-background text-foreground">
       <div className="flex w-full items-center gap-3 px-6 py-3">
         <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
           <Image src="/logo.svg" alt="Newslytic logo" width={34} height={34} />
@@ -34,7 +34,7 @@ export function AppHeader({ rightSlot }: Props) {
               <Link
                 key={route.href}
                 href={route.href}
-                className={`shrink-0 text-sm font-medium transition ${active ? "text-white" : "text-white/75 hover:text-white"}`}
+                className={`shrink-0 text-sm font-medium transition ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {route.label}
               </Link>

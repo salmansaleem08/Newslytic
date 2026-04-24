@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
 type Props = {
   title: string;
@@ -51,14 +52,29 @@ export function AuthLayout({ title, subtitle, children }: Props) {
 
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-                <p className="text-4xl font-bold text-blue-300">10x</p>
+                <p className="text-4xl font-bold text-emerald-300">10x</p>
                 <p className="mt-1 text-white/60">Faster daily briefing</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-                <p className="text-4xl font-bold text-blue-300">95%</p>
+                <p className="text-4xl font-bold text-emerald-300">95%</p>
                 <p className="mt-1 text-white/60">Lower news overwhelm</p>
               </div>
             </div>
+
+            <Card className="border-white/10 bg-white/5 text-white shadow-none">
+              <CardHeader>
+                <CardTitle className="text-base">Trustpilot</CardTitle>
+                <CardDescription className="text-white/60">What our early users say</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p className="rounded-md border border-white/10 bg-black/15 p-3 text-white/80">
+                  &quot;I finally understand world events in 5 minutes every morning.&quot;
+                </p>
+                <p className="rounded-md border border-white/10 bg-black/15 p-3 text-white/80">
+                  &quot;Newslytic reduces noise and keeps me focused on what matters.&quot;
+                </p>
+              </CardContent>
+            </Card>
 
           </div>
         </div>
