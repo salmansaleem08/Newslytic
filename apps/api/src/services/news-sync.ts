@@ -2,7 +2,7 @@ import axios from "axios";
 import { env } from "../config.js";
 import { NEWS_CATEGORIES, type NewsCategory, NewsItemModel } from "../models/news-item.js";
 import { NewsSyncStateModel } from "../models/news-sync-state.js";
-import { summarizeNews } from "./gemini.js";
+import { analyzeNewsSignals, summarizeNews } from "./gemini.js";
 
 function getDayKey(date = new Date()): string {
   return date.toISOString().slice(0, 10);
@@ -184,6 +184,11 @@ export async function runNewsSync(options: SyncOptions = {}): Promise<{ inserted
       }
 
       const summary = await summarizeNews(`${article.title}\n\n${article.description}`);
+      const signals = await analyzeNewsSignals({
+        title: article.title,
+        summary,
+        source: article.source
+      });
       await NewsItemModel.create({
         title: article.title,
         summary,
@@ -192,6 +197,8 @@ export async function runNewsSync(options: SyncOptions = {}): Promise<{ inserted
         imageUrl: article.imageUrl,
         category: article.category,
         relevanceScore: computeRelevanceScore(article),
+        sentiment: signals.sentiment,
+        bias: signals.bias,
         publishedAt: article.publishedAt,
         dayKey
       });
