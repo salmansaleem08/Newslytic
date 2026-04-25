@@ -40,6 +40,33 @@ type HistoryItem = {
   segmentCount: number;
 };
 
+function cleanNarrationText(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/^\s*headline\s*:\s*/gim, "")
+    .replace(/^\s*summary\s*:\s*/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function fetchJsonWithRetry<T>(url: string, init: RequestInit = {}, attempts = 3): Promise<T> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, init);
+      if (!response.ok) throw new Error(`Request failed (${response.status})`);
+      return (await response.json()) as T;
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Failed to fetch");
+}
+
 export default function AiNewsCasterPage() {
   const DEFAULT_VOICE = "en-US-ChristopherNeural";
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -70,19 +97,13 @@ export default function AiNewsCasterPage() {
 
     try {
       const scriptUrl = `${API_BASE}/api/news-caster/today?voice=${encodeURIComponent(voice)}`;
-      const [voicesRes, scriptRes, historyRes] = await Promise.all([
-        fetch(`${API_BASE}/api/news-caster/voices`, { cache: "no-store" }),
-        fetch(scriptUrl, { cache: "no-store", signal: scriptController.signal }),
-        fetch(`${API_BASE}/api/news-caster/history`, { cache: "no-store" })
+      const [voicesData, scriptData, historyData] = await Promise.all([
+        fetchJsonWithRetry<{ voices: string[] }>(`${API_BASE}/api/news-caster/voices`, { cache: "no-store" }),
+        fetchJsonWithRetry<{ script: ScriptPayload }>(scriptUrl, { cache: "no-store", signal: scriptController.signal }),
+        fetchJsonWithRetry<{ history: HistoryItem[] }>(`${API_BASE}/api/news-caster/history`, { cache: "no-store" })
       ]);
 
-      if (voicesRes.ok) {
-        const voicesData = (await voicesRes.json()) as { voices: string[] };
-        if (voicesData.voices.length > 0) setVoices(voicesData.voices);
-      }
-
-      if (!scriptRes.ok) throw new Error("Could not load AI News Caster script");
-      const scriptData = (await scriptRes.json()) as { script: ScriptPayload };
+      if (voicesData.voices.length > 0) setVoices(voicesData.voices);
       setScript(scriptData.script);
       setSelectedVoice(scriptData.script.voice);
       setSelectedHistoryId("");
@@ -92,10 +113,7 @@ export default function AiNewsCasterPage() {
       setIsPlaying(false);
       setShouldAutoPlay(false);
 
-      if (historyRes.ok) {
-        const historyData = (await historyRes.json()) as { history: HistoryItem[] };
-        setHistory(historyData.history);
-      }
+      setHistory(historyData.history);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         setLoadError(
@@ -193,9 +211,7 @@ export default function AiNewsCasterPage() {
       setLoading(true);
       setLoadError("");
       setPlayerNotice("");
-      const res = await fetch(`${API_BASE}/api/news-caster/script/${encodeURIComponent(historyId)}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Could not load selected broadcast");
-      const data = (await res.json()) as { script: ScriptPayload };
+      const data = await fetchJsonWithRetry<{ script: ScriptPayload }>(`${API_BASE}/api/news-caster/script/${encodeURIComponent(historyId)}`, { cache: "no-store" });
       setScript(data.script);
       setPlayerNotice("");
       setSelectedVoice(data.script.voice);
@@ -216,7 +232,9 @@ export default function AiNewsCasterPage() {
 
   const currentCaption = useMemo(() => {
     if (!activeSection) return "";
-    const words = activeSection.text.split(/\s+/).filter(Boolean);
+    const clean = cleanNarrationText(activeSection.text);
+    if (!duration) return clean;
+    const words = clean.split(/\s+/).filter(Boolean);
     const progress = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
     const shownWords = Math.max(1, Math.floor(words.length * progress));
     return words.slice(0, shownWords).join(" ");

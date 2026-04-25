@@ -13,6 +13,16 @@ type ScriptSegment = {
   source: string;
 };
 
+function cleanNarrationText(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/^\s*headline\s*:\s*/gim, "")
+    .replace(/^\s*summary\s*:\s*/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 type CasterPayload = {
   dayKey: string;
   cycleKey: string;
@@ -184,7 +194,7 @@ async function hasPlayableSections(
 function buildSegments(items: Array<{ title: string; summary: string; imageUrl: string; source: string }>): ScriptSegment[] {
   return items.map((item) => ({
     heading: item.title,
-    narration: item.summary,
+    narration: cleanNarrationText(item.summary),
     imageUrl: item.imageUrl,
     source: item.source
   }));
@@ -219,7 +229,7 @@ function toResponse(doc: {
       return {
         kind: section.kind,
         heading: section.heading ?? "",
-        text: section.text,
+        text: cleanNarrationText(section.text),
         imageUrl: section.imageUrl ?? "",
         source: section.source ?? "",
         audioUrl: !rawPath ? "" : isRemoteAsset(rawPath) ? rawPath : fileName ? `/media/news-caster/${fileName}` : ""
@@ -363,7 +373,7 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string, forc
   }
 
   const dateLabel = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-  const intro = `Good day. This is your AI News Caster briefing for ${dateLabel}. Here are ten important stories in a clear sequence.`;
+  const intro = `Good day. Welcome to Newslytic AI News Caster for ${dateLabel}. In this briefing, we bring you the ten most important stories shaping the day.`;
   const outro = "That concludes your daily briefing. Stay informed, stay thoughtful, and I will see you in the next update.";
   const segments = buildSegments(
     selected.map((item) => ({
