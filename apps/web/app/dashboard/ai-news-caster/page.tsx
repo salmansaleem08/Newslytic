@@ -43,8 +43,10 @@ type HistoryItem = {
 export default function AiNewsCasterPage() {
   const DEFAULT_VOICE = "en-US-ChristopherNeural";
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [playerNotice, setPlayerNotice] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -59,7 +61,8 @@ export default function AiNewsCasterPage() {
 
   const loadCasterData = useCallback(async (voice: string) => {
     setLoading(true);
-    setError("");
+    setLoadError("");
+    setPlayerNotice("");
 
     const scriptController = new AbortController();
     const scriptTimeoutMs = 240_000;
@@ -95,11 +98,11 @@ export default function AiNewsCasterPage() {
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        setError(
+        setLoadError(
           "Loading timed out while generating audio. Try again in a minute, or open News Caster again once the server has finished preparing clips."
         );
       } else {
-        setError(err instanceof Error ? err.message : "Unable to load AI News Caster");
+        setLoadError(err instanceof Error ? err.message : "Unable to load AI News Caster");
       }
     } finally {
       window.clearTimeout(scriptTimeoutId);
@@ -123,9 +126,32 @@ export default function AiNewsCasterPage() {
 
   function onTogglePlayback() {
     const node = audioRef.current;
-    if (!node) return;
+    if (!node || !activeSection) return;
     if (!audioSrc) {
-      setError("No playable audio clip was generated for this broadcast yet. Please refresh or switch voice.");
+      if ("speechSynthesis" in window) {
+        if (isPlaying) {
+          window.speechSynthesis.cancel();
+          setIsPlaying(false);
+          setShouldAutoPlay(false);
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(activeSection.text);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.onend = () => moveToNextPlayableSegment();
+        utterance.onerror = () => {
+          setIsPlaying(false);
+          setShouldAutoPlay(false);
+          setPlayerNotice("Audio file unavailable, and browser speech fallback failed for this segment.");
+        };
+        speechRef.current = utterance;
+        setPlayerNotice("Server audio unavailable. Using browser speech fallback.");
+        setIsPlaying(true);
+        setShouldAutoPlay(true);
+        window.speechSynthesis.speak(utterance);
+        return;
+      }
+      setPlayerNotice("No playable audio clip was generated for this broadcast yet. Please refresh or switch voice.");
       return;
     }
 
@@ -149,17 +175,19 @@ export default function AiNewsCasterPage() {
     }
     setIsPlaying(false);
     setShouldAutoPlay(false);
-    setError("Audio source is unavailable for this segment. Please try another broadcast/voice.");
+    setPlayerNotice("Audio source is unavailable for this segment. Please try another broadcast/voice.");
   }
 
   async function loadHistoryScript(historyId: string) {
     try {
       setLoading(true);
-      setError("");
+      setLoadError("");
+      setPlayerNotice("");
       const res = await fetch(`${API_BASE}/api/news-caster/script/${encodeURIComponent(historyId)}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Could not load selected broadcast");
       const data = (await res.json()) as { script: ScriptPayload };
       setScript(data.script);
+      setPlayerNotice("");
       setSelectedVoice(data.script.voice);
       setSelectedHistoryId(historyId);
       setActiveClipIndex(0);
@@ -169,7 +197,7 @@ export default function AiNewsCasterPage() {
       setShouldAutoPlay(false);
       if (audioRef.current) audioRef.current.pause();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load selected broadcast");
+      setLoadError(err instanceof Error ? err.message : "Unable to load selected broadcast");
     } finally {
       setLoading(false);
     }
@@ -194,6 +222,9 @@ export default function AiNewsCasterPage() {
   useEffect(() => {
     const node = audioRef.current;
     if (!node) return;
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
     node.load();
     setCurrentTime(0);
     setDuration(0);
@@ -201,6 +232,14 @@ export default function AiNewsCasterPage() {
       void node.play();
     }
   }, [audioSrc, shouldAutoPlay]);
+
+  useEffect(() => {
+    return () => {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -236,11 +275,11 @@ export default function AiNewsCasterPage() {
               </CardContent>
             </Card>
           </div>
-        ) : error ? (
+        ) : loadError ? (
           <Card>
             <CardHeader>
               <CardTitle>AI News Caster unavailable</CardTitle>
-              <CardDescription>{error}</CardDescription>
+              <CardDescription>{loadError}</CardDescription>
             </CardHeader>
           </Card>
         ) : script ? (
@@ -285,6 +324,7 @@ export default function AiNewsCasterPage() {
                 </div>
 
                 <div className="space-y-4 p-4 sm:p-6">
+                  {playerNotice ? <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">{playerNotice}</p> : null}
                   <audio
                     ref={audioRef}
                     src={audioSrc}
