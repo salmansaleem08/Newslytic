@@ -45,7 +45,7 @@ newsCasterRouter.get("/diagnostics", async (_req, res) => {
   }
 });
 
-newsCasterRouter.post("/regenerate", async (req, res) => {
+async function regenerate(req: { query: Record<string, unknown> }, res: { json: (value: unknown) => unknown; status: (code: number) => { json: (value: unknown) => unknown } }) {
   try {
     const voice = req.query.voice ? String(req.query.voice) : undefined;
     const script = await getOrCreateTodayCasterScript(voice, true);
@@ -56,4 +56,7 @@ newsCasterRouter.post("/regenerate", async (req, res) => {
       details: error instanceof Error ? error.message : "Unknown error"
     });
   }
-});
+}
+
+newsCasterRouter.post("/regenerate", async (req, res) => regenerate(req, res));
+newsCasterRouter.get("/regenerate", async (req, res) => regenerate(req, res));
