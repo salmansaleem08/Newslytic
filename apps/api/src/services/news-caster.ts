@@ -262,6 +262,7 @@ export async function getNewsCasterDiagnostics(): Promise<{
   cloudinaryEnabled: boolean;
   cloudinary: { ok: boolean; message: string };
   tts: { pythonBin: string; scriptPath: string };
+  ttsRuntime: { ok: boolean; message: string };
   latestScript: null | {
     id: string;
     dayKey: string;
@@ -275,6 +276,30 @@ export async function getNewsCasterDiagnostics(): Promise<{
 }> {
   await ensureCasterIndexes();
   const cloudinaryStatus = await checkCloudinaryConnectivity();
+  const pythonBin = env.TTS_PYTHON_BIN_NEWS_CASTER || env.TTS_PYTHON_BIN;
+  const ttsRuntime = await new Promise<{ ok: boolean; message: string }>((resolve) => {
+    const proc = spawn(pythonBin, ["-c", "import edge_tts; print('ok')"], {
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let stderr = "";
+    let stdout = "";
+    proc.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    proc.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    proc.on("error", (error) => {
+      resolve({ ok: false, message: `Failed to start python: ${error.message}` });
+    });
+    proc.on("close", (code) => {
+      if (code === 0 && /ok/i.test(stdout)) {
+        resolve({ ok: true, message: "Python + edge_tts import check passed." });
+      } else {
+        resolve({ ok: false, message: (stderr || stdout || `python check exited with code ${code}`).trim() });
+      }
+    });
+  });
   const latest = await NewsCasterScriptModel.findOne({})
     .sort({ createdAt: -1 })
     .select({ dayKey: 1, cycleKey: 1, voice: 1, sections: 1, createdAt: 1 })
@@ -284,9 +309,10 @@ export async function getNewsCasterDiagnostics(): Promise<{
     cloudinaryEnabled,
     cloudinary: cloudinaryStatus,
     tts: {
-      pythonBin: env.TTS_PYTHON_BIN_NEWS_CASTER || env.TTS_PYTHON_BIN,
+      pythonBin,
       scriptPath: PY_TTS_SCRIPT
     },
+    ttsRuntime,
     latestScript: latest
       ? {
           id: String(latest._id),
@@ -302,7 +328,7 @@ export async function getNewsCasterDiagnostics(): Promise<{
   };
 }
 
-export async function getOrCreateTodayCasterScript(requestedVoice?: string): Promise<CasterPayload> {
+export async function getOrCreateTodayCasterScript(requestedVoice?: string, forceRegenerate = false): Promise<CasterPayload> {
   await ensureCasterIndexes();
   const now = new Date();
   const dayKey = getDayKey(now);
@@ -310,17 +336,19 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
   const voice = NEWS_CASTER_VOICES.includes((requestedVoice || env.TTS_VOICE) as (typeof NEWS_CASTER_VOICES)[number])
     ? (requestedVoice || env.TTS_VOICE)
     : env.TTS_VOICE;
-  let existing = await NewsCasterScriptModel.findOne({ dayKey, cycleKey, voice }).lean();
-  if (existing && existing.sections && existing.sections.length > 0 && (await hasPlayableSections(existing.sections as Array<{ audioPath: string }>))) {
-    return toResponse(existing as never);
-  }
+  if (!forceRegenerate) {
+    let existing = await NewsCasterScriptModel.findOne({ dayKey, cycleKey, voice }).lean();
+    if (existing && existing.sections && existing.sections.length > 0 && (await hasPlayableSections(existing.sections as Array<{ audioPath: string }>))) {
+      return toResponse(existing as never);
+    }
 
-  // Same calendar day but different 4h cycle: reuse latest script so the client does not wait on cold TTS again.
-  existing = await NewsCasterScriptModel.findOne({ dayKey, voice, "sections.0": { $exists: true } })
-    .sort({ createdAt: -1 })
-    .lean();
-  if (existing && existing.sections && existing.sections.length > 0 && (await hasPlayableSections(existing.sections as Array<{ audioPath: string }>))) {
-    return toResponse(existing as never);
+    // Same calendar day but different 4h cycle: reuse latest script so the client does not wait on cold TTS again.
+    existing = await NewsCasterScriptModel.findOne({ dayKey, voice, "sections.0": { $exists: true } })
+      .sort({ createdAt: -1 })
+      .lean();
+    if (existing && existing.sections && existing.sections.length > 0 && (await hasPlayableSections(existing.sections as Array<{ audioPath: string }>))) {
+      return toResponse(existing as never);
+    }
   }
 
   const todayItems = await NewsItemModel.find({ dayKey })
@@ -422,6 +450,11 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
     failures
   };
   const primaryAudioPath = firstPlayable?.audioPath ?? "";
+  if (!primaryAudioPath) {
+    const firstFailure = failures[0];
+    const failureText = firstFailure ? `First failure: ${firstFailure.error}` : "No TTS segment succeeded.";
+    throw new Error(`Unable to generate playable caster audio. ${failureText}`);
+  }
   const created = await NewsCasterScriptModel.findOneAndUpdate(
     { dayKey, cycleKey, voice },
     {

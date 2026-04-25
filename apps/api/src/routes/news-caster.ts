@@ -44,3 +44,16 @@ newsCasterRouter.get("/diagnostics", async (_req, res) => {
     });
   }
 });
+
+newsCasterRouter.post("/regenerate", async (req, res) => {
+  try {
+    const voice = req.query.voice ? String(req.query.voice) : undefined;
+    const script = await getOrCreateTodayCasterScript(voice, true);
+    return res.json({ script });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Unable to regenerate AI news caster script",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
