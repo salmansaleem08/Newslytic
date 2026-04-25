@@ -338,9 +338,8 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
   }
   const poolSize = Math.min(CONCURRENCY, sections.length);
   await Promise.all(Array.from({ length: poolSize }, () => ttsWorker()));
-  const playableSections = sectionsWithAudio.filter((section) => Boolean(section.audioPath));
-
-  const primaryAudioPath = playableSections[0]?.audioPath ?? "";
+  const firstPlayable = sectionsWithAudio.find((section) => Boolean(section.audioPath));
+  const primaryAudioPath = firstPlayable?.audioPath ?? "";
   const created = await NewsCasterScriptModel.findOneAndUpdate(
     { dayKey, cycleKey, voice },
     {
@@ -350,7 +349,7 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
       intro,
       outro,
       segments,
-      sections: playableSections,
+      sections: sectionsWithAudio,
       audioPath: primaryAudioPath
     },
     { upsert: true, new: true }

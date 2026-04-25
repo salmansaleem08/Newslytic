@@ -116,6 +116,7 @@ export default function AiNewsCasterPage() {
   }, [loadCasterData]);
 
   const sections = script?.sections ?? [];
+  const firstPlayableSectionIndex = useMemo(() => sections.findIndex((section) => Boolean(section.audioUrl)), [sections]);
   const activeSection = sections[activeClipIndex];
   const isIntroPhase = activeSection?.kind === "intro";
   const audioSrc = activeSection
@@ -123,6 +124,15 @@ export default function AiNewsCasterPage() {
       ? activeSection.audioUrl
       : `${API_BASE}${activeSection.audioUrl}`
     : "";
+
+  useEffect(() => {
+    if (!sections.length) return;
+    if (firstPlayableSectionIndex > -1) {
+      setActiveClipIndex(firstPlayableSectionIndex);
+    } else {
+      setActiveClipIndex(0);
+    }
+  }, [firstPlayableSectionIndex, sections.length]);
 
   function onTogglePlayback() {
     const node = audioRef.current;
@@ -190,7 +200,8 @@ export default function AiNewsCasterPage() {
       setPlayerNotice("");
       setSelectedVoice(data.script.voice);
       setSelectedHistoryId(historyId);
-      setActiveClipIndex(0);
+      const firstPlayable = data.script.sections.findIndex((section) => Boolean(section.audioUrl));
+      setActiveClipIndex(firstPlayable > -1 ? firstPlayable : 0);
       setCurrentTime(0);
       setDuration(0);
       setIsPlaying(false);
@@ -308,8 +319,11 @@ export default function AiNewsCasterPage() {
                       }}
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-                      Visual unavailable for this source
+                    <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_center,_hsl(var(--primary)/0.18),_transparent_62%),linear-gradient(120deg,#0b1021_0%,#111827_50%,#0b1021_100%)] p-6 text-center">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.16em] text-white/70">Newslytic</p>
+                        <p className="mt-2 text-sm font-semibold text-white">{activeSection?.heading ?? "Breaking story"}</p>
+                      </div>
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
@@ -339,13 +353,7 @@ export default function AiNewsCasterPage() {
                         setShouldAutoPlay(false);
                         return;
                       }
-                      if (activeClipIndex < sections.length - 1) {
-                        setShouldAutoPlay(true);
-                        setActiveClipIndex((prev) => prev + 1);
-                      } else {
-                        setIsPlaying(false);
-                        setShouldAutoPlay(false);
-                      }
+                      moveToNextPlayableSegment();
                     }}
                     onError={() => {
                       moveToNextPlayableSegment();
@@ -363,7 +371,6 @@ export default function AiNewsCasterPage() {
                     <button
                       type="button"
                       onClick={onTogglePlayback}
-                      disabled={!audioSrc}
                       className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:bg-primary/90"
                       aria-label={isPlaying ? "Pause broadcast" : "Play broadcast"}
                     >
