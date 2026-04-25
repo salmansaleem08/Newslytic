@@ -46,6 +46,7 @@ export async function summarizeTruthCheck(payload: {
   confidence: number;
   evidence: Array<{ publisher: string; title: string; rating: string }>;
 }): Promise<string> {
+  const nowIso = new Date().toISOString();
   const evidenceText = payload.evidence
     .slice(0, 6)
     .map((item, idx) => `${idx + 1}. ${item.publisher || "Unknown publisher"} | ${item.title || "Untitled"} | ${item.rating || "No rating"}`)
@@ -64,8 +65,10 @@ export async function summarizeTruthCheck(payload: {
               text: [
                 "You are a fact-check assistant. Summarize in 3-5 bullet points.",
                 "Use only the given evidence; do not invent facts.",
+                "Prioritize whether the claim is true as of the current moment.",
                 "Mention certainty level and any disagreement across sources.",
                 "",
+                `Current UTC time: ${nowIso}`,
                 `Claim: ${payload.claim}`,
                 `Verdict: ${payload.verdict}`,
                 `Confidence: ${payload.confidence}%`,
@@ -89,6 +92,7 @@ export async function assessClaimWithEvidence(payload: {
   claim: string;
   evidence: Array<{ publisher: string; title: string; snippet: string }>;
 }): Promise<{ verdict: string; confidence: number; summary: string }> {
+  const nowIso = new Date().toISOString();
   const evidenceText = payload.evidence
     .slice(0, 8)
     .map((item, idx) => `${idx + 1}. ${item.publisher || "Unknown"} | ${item.title}\n   ${item.snippet}`)
@@ -104,11 +108,13 @@ export async function assessClaimWithEvidence(payload: {
             {
               text: [
                 "Assess this claim using only the provided evidence snippets from news/fact-check publishers.",
+                "Anchor your judgement to what is true right now (current date/time), not only historical events.",
                 "Return strict JSON with keys: verdict, confidence, summary.",
                 "verdict must be one of: Yes, No, Unclear.",
                 "confidence must be integer 0-100.",
                 "summary should be 3-5 short bullet-style lines without markdown symbols.",
                 "",
+                `Current UTC time: ${nowIso}`,
                 `Claim: ${payload.claim}`,
                 "",
                 `Evidence:\n${evidenceText}`
@@ -142,6 +148,7 @@ export async function assessClaimWithEvidence(payload: {
 export async function assessClaimDirect(payload: {
   claim: string;
 }): Promise<{ verdict: string; confidence: number; summary: string }> {
+  const nowIso = new Date().toISOString();
   try {
     const response = await genai.models.generateContent({
       model: env.GEMINI_MODEL,
@@ -152,11 +159,13 @@ export async function assessClaimDirect(payload: {
             {
               text: [
                 "Evaluate the claim using your best current knowledge and broad context.",
+                "Decide if it is true as of the current date/time, not just whether it happened in the past.",
                 "Return strict JSON with keys: verdict, confidence, summary.",
                 "verdict must be one of: Yes, No, Unclear.",
                 "confidence must be integer 0-100.",
                 "summary should be 2-4 plain lines without markdown symbols.",
                 "",
+                `Current UTC time: ${nowIso}`,
                 `Claim: ${payload.claim}`
               ].join("\n")
             }

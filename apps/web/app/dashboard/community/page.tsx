@@ -157,6 +157,10 @@ export default function CommunityPage() {
     await loadFeed(selectedCategory);
   }
 
+  const visibleFeed = useMemo(
+    () => (selectedCategory === "all" ? feed : feed.filter((item) => item.category.toLowerCase() === selectedCategory)),
+    [feed, selectedCategory]
+  );
   const heading = useMemo(() => `Community Feed (${selectedCategory === "all" ? "All categories" : selectedCategory})`, [selectedCategory]);
 
   return (
@@ -208,7 +212,7 @@ export default function CommunityPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {feed.map((item) => (
+              {visibleFeed.map((item) => (
                 <Card key={item._id}>
                   <CardContent className="pt-6">
                     <article className="space-y-3">

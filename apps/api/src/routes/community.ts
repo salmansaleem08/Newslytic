@@ -37,7 +37,7 @@ async function requireUser(req: Request): Promise<{ id: string; firstName: strin
 
 communityRouter.get("/feed", async (req, res) => {
   const userId = await getOptionalUserId(req);
-  const requested = String(req.query.category ?? "all");
+  const requested = String(req.query.category ?? "all").trim().toLowerCase();
   const limit = Math.min(30, Math.max(10, Number(req.query.limit ?? 20)));
   const before = req.query.before ? new Date(String(req.query.before)) : null;
   if (before && Number.isNaN(before.getTime())) return res.status(400).json({ error: "Invalid before cursor" });

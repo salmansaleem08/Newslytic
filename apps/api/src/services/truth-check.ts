@@ -68,16 +68,20 @@ function fromGeminiVerdict(verdict: string): string {
 
 async function fetchFactChecks(claim: string): Promise<Source[]> {
   if (!env.FACTCHECK_API_KEY) return [];
+  let data: { claims?: unknown[] } = {};
+  try {
+    ({ data } = await axios.get("https://factchecktools.googleapis.com/v1alpha1/claims:search", {
+      params: {
+        query: claim,
+        key: env.FACTCHECK_API_KEY,
+        languageCode: "en"
+      }
+    }));
+  } catch {
+    return [];
+  }
 
-  const { data } = await axios.get("https://factchecktools.googleapis.com/v1alpha1/claims:search", {
-    params: {
-      query: claim,
-      key: env.FACTCHECK_API_KEY,
-      languageCode: "en"
-    }
-  });
-
-  const claims = Array.isArray(data?.claims) ? data.claims : [];
+  const claims = Array.isArray(data.claims) ? data.claims : [];
   const sources: Source[] = [];
   for (const claimEntry of claims as Array<Record<string, unknown>>) {
     const reviews = Array.isArray(claimEntry.claimReview) ? claimEntry.claimReview : [];
@@ -98,45 +102,53 @@ async function fetchNewsEvidence(claim: string): Promise<Source[]> {
   const sources: Source[] = [];
 
   if (env.NEWS_API_KEY) {
-    const { data } = await axios.get("https://newsapi.org/v2/everything", {
-      params: {
-        q: claim,
-        apiKey: env.NEWS_API_KEY,
-        language: "en",
-        sortBy: "publishedAt",
-        pageSize: 8
-      }
-    });
-    const articles = Array.isArray(data?.articles) ? data.articles : [];
-    for (const article of articles as Array<Record<string, unknown>>) {
-      sources.push({
-        publisher: String((article.source as { name?: string } | undefined)?.name ?? ""),
-        url: String(article.url ?? ""),
-        title: String(article.title ?? ""),
-        rating: "Reported by publisher",
-        reviewDate: String(article.publishedAt ?? "")
+    try {
+      const { data } = await axios.get("https://newsapi.org/v2/everything", {
+        params: {
+          q: claim,
+          apiKey: env.NEWS_API_KEY,
+          language: "en",
+          sortBy: "publishedAt",
+          pageSize: 8
+        }
       });
+      const articles = Array.isArray(data?.articles) ? data.articles : [];
+      for (const article of articles as Array<Record<string, unknown>>) {
+        sources.push({
+          publisher: String((article.source as { name?: string } | undefined)?.name ?? ""),
+          url: String(article.url ?? ""),
+          title: String(article.title ?? ""),
+          rating: "Reported by publisher",
+          reviewDate: String(article.publishedAt ?? "")
+        });
+      }
+    } catch {
+      // Best effort only.
     }
   }
 
   if (sources.length === 0 && env.GNEWS_API_KEY) {
-    const { data } = await axios.get("https://gnews.io/api/v4/search", {
-      params: {
-        q: claim,
-        token: env.GNEWS_API_KEY,
-        lang: "en",
-        max: 8
-      }
-    });
-    const articles = Array.isArray(data?.articles) ? data.articles : [];
-    for (const article of articles as Array<Record<string, unknown>>) {
-      sources.push({
-        publisher: String((article.source as { name?: string } | undefined)?.name ?? ""),
-        url: String(article.url ?? ""),
-        title: String(article.title ?? ""),
-        rating: "Reported by publisher",
-        reviewDate: String(article.publishedAt ?? "")
+    try {
+      const { data } = await axios.get("https://gnews.io/api/v4/search", {
+        params: {
+          q: claim,
+          token: env.GNEWS_API_KEY,
+          lang: "en",
+          max: 8
+        }
       });
+      const articles = Array.isArray(data?.articles) ? data.articles : [];
+      for (const article of articles as Array<Record<string, unknown>>) {
+        sources.push({
+          publisher: String((article.source as { name?: string } | undefined)?.name ?? ""),
+          url: String(article.url ?? ""),
+          title: String(article.title ?? ""),
+          rating: "Reported by publisher",
+          reviewDate: String(article.publishedAt ?? "")
+        });
+      }
+    } catch {
+      // Best effort only.
     }
   }
 

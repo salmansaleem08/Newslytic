@@ -288,11 +288,19 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
       const section = sections[index];
       const fileName = `caster-${cycleKey}-${safeVoice}-part-${index + 1}.mp3`;
       const absoluteAudioPath = path.join(STORAGE_ROOT, fileName);
-      await runEdgeTts(section.text, absoluteAudioPath, voice);
-      sectionsWithAudio[index] = {
-        ...section,
-        audioPath: path.join("storage", "news-caster", fileName)
-      };
+      try {
+        await runEdgeTts(section.text, absoluteAudioPath, voice);
+        sectionsWithAudio[index] = {
+          ...section,
+          audioPath: path.join("storage", "news-caster", fileName)
+        };
+      } catch (error) {
+        console.error("News caster TTS segment generation failed:", error);
+        sectionsWithAudio[index] = {
+          ...section,
+          audioPath: ""
+        };
+      }
     }
   }
   const poolSize = Math.min(CONCURRENCY, sections.length);

@@ -112,10 +112,7 @@ export default function AiNewsCasterPage() {
     void loadCasterData(DEFAULT_VOICE);
   }, [loadCasterData]);
 
-  const sections = useMemo(() => {
-    const raw = script?.sections ?? [];
-    return raw.filter((section) => Boolean(section.audioUrl));
-  }, [script]);
+  const sections = script?.sections ?? [];
   const activeSection = sections[activeClipIndex];
   const isIntroPhase = activeSection?.kind === "intro";
   const audioSrc = activeSection
@@ -144,9 +141,10 @@ export default function AiNewsCasterPage() {
   }
 
   function moveToNextPlayableSegment(): void {
-    if (activeClipIndex < sections.length - 1) {
+    const nextIndex = sections.findIndex((section, idx) => idx > activeClipIndex && Boolean(section.audioUrl));
+    if (nextIndex > -1) {
       setShouldAutoPlay(true);
-      setActiveClipIndex((prev) => Math.min(prev + 1, sections.length - 1));
+      setActiveClipIndex(nextIndex);
       return;
     }
     setIsPlaying(false);
