@@ -44,6 +44,16 @@ type ProviderArticle = {
   category: NewsCategory;
 };
 
+function normalizeGeneratedSummary(raw: string, fallback: string): string {
+  const cleaned = raw
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/^\s*headline\s*:\s*/gim, "")
+    .replace(/^\s*summary\s*:\s*/gim, "")
+    .trim();
+  return cleaned || fallback;
+}
+
 function computeRelevanceScore(article: ProviderArticle): number {
   const ageHours = Math.max(0, (Date.now() - article.publishedAt.getTime()) / 3_600_000);
   const freshnessScore = Math.max(0, 100 - ageHours * 4);
@@ -172,7 +182,8 @@ export async function runNewsSync(options: SyncOptions = {}): Promise<{ inserted
         continue;
       }
 
-      const summary = await summarizeNews(`${article.title}\n\n${article.description}`);
+      const rawSummary = await summarizeNews(`${article.title}\n\n${article.description}`);
+      const summary = normalizeGeneratedSummary(rawSummary, article.description || article.title);
       const signals = await analyzeNewsSignals({
         title: article.title,
         summary,

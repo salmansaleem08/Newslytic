@@ -152,14 +152,17 @@ function toResponse(doc: {
     intro: doc.intro,
     outro: doc.outro,
     segments: doc.segments,
-    sections: doc.sections.map((section) => ({
-      kind: section.kind,
-      heading: section.heading ?? "",
-      text: section.text,
-      imageUrl: section.imageUrl ?? "",
-      source: section.source ?? "",
-      audioUrl: `/media/news-caster/${path.basename(section.audioPath)}`
-    }))
+    sections: doc.sections.map((section) => {
+      const fileName = path.basename(section.audioPath || "");
+      return {
+        kind: section.kind,
+        heading: section.heading ?? "",
+        text: section.text,
+        imageUrl: section.imageUrl ?? "",
+        source: section.source ?? "",
+        audioUrl: fileName ? `/media/news-caster/${fileName}` : ""
+      };
+    })
   };
 }
 

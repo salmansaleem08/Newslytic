@@ -20,6 +20,18 @@ type NewsItem = {
   category: string;
 };
 
+function cleanSummaryText(input: string): string {
+  return input
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/^headline\s*:\s*/i, "")
+    .replace(/^summary\s*:\s*/i, "")
+    .replace(/\bheadline\s*:\s*/gi, "")
+    .replace(/\bsummary\s*:\s*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function DashboardPage() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -74,9 +86,9 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader
         overlay
-        className="absolute left-0 right-0 top-0 z-50 border-border/60 bg-background/85 text-foreground shadow-sm backdrop-blur-lg supports-[backdrop-filter]:bg-background/75"
+        className="fixed left-0 right-0 top-0 z-[120] border-border/60 bg-background/85 text-foreground shadow-sm backdrop-blur-lg supports-[backdrop-filter]:bg-background/75"
       />
-      <main className="w-full">
+      <main className="w-full pt-[var(--header-height)]">
         <section className="relative h-screen w-full overflow-hidden">
           {items.length > 1 ? (
             <>
@@ -132,8 +144,8 @@ export default function DashboardPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-end sm:justify-between sm:p-8">
                   <div className="min-w-0 max-w-3xl">
-                    <h2 className="text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">{activeItem.title}</h2>
-                    <p className="mt-2 text-sm text-white/90 sm:mt-3 sm:text-base">{activeItem.summary}</p>
+                    <h2 className="text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">{cleanSummaryText(activeItem.title)}</h2>
+                    <p className="mt-2 text-sm font-medium text-white/95 sm:mt-3 sm:text-base">{cleanSummaryText(activeItem.summary)}</p>
                   </div>
                   <Link href={`/dashboard/news/${activeItem._id}`} className="shrink-0 sm:self-end">
                     <Button className="h-11 w-full sm:w-auto">Read More</Button>

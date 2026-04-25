@@ -60,6 +60,12 @@ function buildVerdict(graph: GraphData): { verdict: string; confidence: number }
   return { verdict: "Insufficient evidence", confidence: 35 };
 }
 
+function fromGeminiVerdict(verdict: string): string {
+  if (verdict === "Yes") return "Likely true";
+  if (verdict === "No") return "Likely false or misleading";
+  return "Mixed / partially true";
+}
+
 async function fetchFactChecks(claim: string): Promise<Source[]> {
   if (!env.FACTCHECK_API_KEY) return [];
 
@@ -168,9 +174,12 @@ export async function verifyClaim(claim: string): Promise<TruthCheckResult> {
     graph[classifyRating(source.rating)] += 1;
   }
 
-  let verdictInfo = buildVerdict(graph);
+  const localVerdict = buildVerdict(graph);
+  let verdictInfo = localVerdict;
   let summary = "";
-  if (sources.length > 0 && /insufficient evidence/i.test(verdictInfo.verdict)) {
+
+  let geminiResult: { verdict: string; confidence: number; summary: string } | null = null;
+  if (sources.length > 0) {
     const assessed = await assessClaimWithEvidence({
       claim,
       evidence: sources.slice(0, 8).map((source) => ({
@@ -179,11 +188,34 @@ export async function verifyClaim(claim: string): Promise<TruthCheckResult> {
         snippet: source.rating
       }))
     });
-    verdictInfo = {
-      verdict: assessed.verdict === "Yes" ? "Likely true" : assessed.verdict === "No" ? "Likely false or misleading" : "Mixed / partially true",
-      confidence: assessed.confidence
+    geminiResult = {
+      verdict: fromGeminiVerdict(assessed.verdict),
+      confidence: assessed.confidence,
+      summary: assessed.summary
     };
-    summary = assessed.summary;
+  }
+
+  // Compare the rule-based provider verdict and Gemini assessment, choose higher-confidence.
+  const localCandidate = {
+    verdict: localVerdict.verdict,
+    confidence: localVerdict.confidence,
+    summary: "",
+    provider: "provider" as const
+  };
+  const geminiCandidate = geminiResult
+    ? {
+        verdict: geminiResult.verdict,
+        confidence: geminiResult.confidence,
+        summary: geminiResult.summary,
+        provider: "gemini" as const
+      }
+    : null;
+  const selected =
+    geminiCandidate && geminiCandidate.confidence >= localCandidate.confidence ? geminiCandidate : localCandidate;
+
+  verdictInfo = { verdict: selected.verdict, confidence: selected.confidence };
+  if (selected.provider === "gemini" && selected.summary) {
+    summary = selected.summary;
   }
 
   if (!summary) {

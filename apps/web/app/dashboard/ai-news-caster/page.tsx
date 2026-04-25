@@ -112,14 +112,25 @@ export default function AiNewsCasterPage() {
     void loadCasterData(DEFAULT_VOICE);
   }, [loadCasterData]);
 
-  const sections = script?.sections ?? [];
+  const sections = useMemo(() => {
+    const raw = script?.sections ?? [];
+    return raw.filter((section) => Boolean(section.audioUrl));
+  }, [script]);
   const activeSection = sections[activeClipIndex];
   const isIntroPhase = activeSection?.kind === "intro";
-  const audioSrc = activeSection ? `${API_BASE}${activeSection.audioUrl}` : "";
+  const audioSrc = activeSection
+    ? activeSection.audioUrl.startsWith("http://") || activeSection.audioUrl.startsWith("https://")
+      ? activeSection.audioUrl
+      : `${API_BASE}${activeSection.audioUrl}`
+    : "";
 
   function onTogglePlayback() {
     const node = audioRef.current;
     if (!node) return;
+    if (!audioSrc) {
+      setError("No playable audio clip was generated for this broadcast yet. Please refresh or switch voice.");
+      return;
+    }
 
     if (node.paused) {
       setShouldAutoPlay(true);
@@ -287,6 +298,11 @@ export default function AiNewsCasterPage() {
                         setShouldAutoPlay(false);
                       }
                     }}
+                    onError={() => {
+                      setIsPlaying(false);
+                      setShouldAutoPlay(false);
+                      setError("Audio source is unavailable for this segment. Please try another broadcast/voice.");
+                    }}
                   />
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <button
@@ -300,6 +316,7 @@ export default function AiNewsCasterPage() {
                     <button
                       type="button"
                       onClick={onTogglePlayback}
+                      disabled={!audioSrc}
                       className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:bg-primary/90"
                       aria-label={isPlaying ? "Pause broadcast" : "Play broadcast"}
                     >
