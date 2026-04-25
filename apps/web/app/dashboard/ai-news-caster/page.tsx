@@ -61,10 +61,15 @@ export default function AiNewsCasterPage() {
     setLoading(true);
     setError("");
 
+    const scriptController = new AbortController();
+    const scriptTimeoutMs = 240_000;
+    const scriptTimeoutId = window.setTimeout(() => scriptController.abort(), scriptTimeoutMs);
+
     try {
+      const scriptUrl = `${API_BASE}/api/news-caster/today?voice=${encodeURIComponent(voice)}`;
       const [voicesRes, scriptRes, historyRes] = await Promise.all([
         fetch(`${API_BASE}/api/news-caster/voices`, { cache: "no-store" }),
-        fetch(`${API_BASE}/api/news-caster/today?voice=${encodeURIComponent(voice)}`, { cache: "no-store" }),
+        fetch(scriptUrl, { cache: "no-store", signal: scriptController.signal }),
         fetch(`${API_BASE}/api/news-caster/history`, { cache: "no-store" })
       ]);
 
@@ -89,8 +94,15 @@ export default function AiNewsCasterPage() {
         setHistory(historyData.history);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load AI News Caster");
+      if (err instanceof Error && err.name === "AbortError") {
+        setError(
+          "Loading timed out while generating audio. Try again in a minute, or open News Caster again once the server has finished preparing clips."
+        );
+      } else {
+        setError(err instanceof Error ? err.message : "Unable to load AI News Caster");
+      }
     } finally {
+      window.clearTimeout(scriptTimeoutId);
       setLoading(false);
     }
   }, []);

@@ -45,7 +45,7 @@ communityRouter.get("/feed", async (req, res) => {
     requested === "all" ? "all" : (NEWS_CATEGORIES.find((value) => value === requested) as NewsCategory | undefined);
   if (!category) return res.status(400).json({ error: "Invalid category filter" });
 
-  await runNewsSync({ force: false }).catch(() => undefined);
+  void runNewsSync({ force: false }).catch(() => undefined);
 
   let allowedCategories: string[] = [...NEWS_CATEGORIES];
   if (userId) {

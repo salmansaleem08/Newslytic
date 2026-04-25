@@ -100,7 +100,7 @@ export default function NewsDetailPage() {
             <aside className="fixed right-0 top-[var(--header-height)] hidden h-[calc(100vh-var(--header-height))] w-[44%] lg:block">
               <Skeleton className="h-full w-full rounded-none" />
             </aside>
-            <section className="h-full w-full overflow-y-auto px-6 py-8 lg:w-[56%]">
+            <section className="h-full w-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:w-[56%]">
               <Skeleton className="mb-5 h-9 w-32" />
               <Skeleton className="h-4 w-24" />
               <Skeleton className="mt-3 h-12 w-4/5" />
@@ -139,7 +139,14 @@ export default function NewsDetailPage() {
               )}
             </aside>
 
-            <section className="h-full w-full overflow-y-auto px-6 py-8 lg:w-[56%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <section className="h-full w-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:w-[56%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="mb-5 lg:hidden">
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.imageUrl} alt={item.title} className="mb-5 aspect-[16/10] w-full rounded-xl object-cover" />
+                ) : null}
+              </div>
+
               <div className="mb-5">
                 <Link href="/dashboard">
                   <Button variant="outline">Back to feed</Button>
@@ -147,7 +154,7 @@ export default function NewsDetailPage() {
               </div>
 
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">{item.category}</p>
-              <h1 className="mt-3 text-4xl font-bold leading-tight text-foreground">{item.title}</h1>
+              <h1 className="mt-3 text-2xl font-bold leading-tight text-foreground sm:text-3xl lg:text-4xl">{item.title}</h1>
               <p className="mt-4 text-lg leading-7 text-muted-foreground">{item.summary}</p>
 
               <div className="mt-6 space-y-2 text-sm">

@@ -23,6 +23,40 @@ type LocalProfile = {
 const PROFILE_KEY = "newslytic.profile";
 const THEME_KEY = "newslytic.theme";
 
+/** Keeps PATCH payloads small so Express JSON limits and Mongo fields stay reliable. */
+function fileToResizedJpegDataUrl(file: File, maxEdge: number, quality: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { naturalWidth: width, naturalHeight: height } = img;
+      if (!width || !height) {
+        reject(new Error("Invalid image"));
+        return;
+      }
+      const scale = Math.min(1, maxEdge / width, maxEdge / height);
+      width = Math.max(1, Math.round(width * scale));
+      height = Math.max(1, Math.round(height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not process image"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read image"));
+    };
+    img.src = objectUrl;
+  });
+}
+
 function getInitialTheme(): ThemeChoice {
   if (typeof window === "undefined") return "light";
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
@@ -107,6 +141,8 @@ export default function SettingsPage() {
       if (response.ok) {
         setMessage("Profile saved successfully.");
       } else {
+        const detail = await response.text().catch(() => "");
+        setError(detail ? `Server responded (${response.status}).` : `Server update failed (${response.status}).`);
         setMessage("Saved locally. Server update failed.");
       }
     } catch {
@@ -133,12 +169,12 @@ export default function SettingsPage() {
     }
 
     setError("");
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      setAvatarUrl(result);
-    };
-    reader.readAsDataURL(file);
+    void fileToResizedJpegDataUrl(file, 720, 0.82)
+      .then((dataUrl) => setAvatarUrl(dataUrl))
+      .catch(() => {
+        setError("Could not process this image. Try another file.");
+        event.target.value = "";
+      });
   }
 
   if (loading) {

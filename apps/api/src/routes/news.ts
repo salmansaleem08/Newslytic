@@ -23,11 +23,10 @@ newsRouter.get("/feed", async (req, res) => {
   const limit = Math.min(15, Math.max(1, Number(req.query.limit ?? 15)));
   const force = String(req.query.refresh ?? "0") === "1";
 
-  try {
-    await runNewsSync({ force, categories: category === "all" ? undefined : [category] });
-  } catch (error) {
+  // Never block the HTTP response on sync (Gemini + RSS can take many minutes).
+  void runNewsSync({ force, categories: category === "all" ? undefined : [category] }).catch((error) => {
     console.error("Feed sync failed:", error);
-  }
+  });
 
   const dayKey = new Date().toISOString().slice(0, 10);
   const query = category === "all" ? { dayKey } : { dayKey, category };

@@ -6,7 +6,7 @@ export const newsCasterRouter = Router();
 
 newsCasterRouter.get("/today", async (req, res) => {
   try {
-    await runNewsSync({ force: false });
+    void runNewsSync({ force: false }).catch(() => undefined);
     const voice = req.query.voice ? String(req.query.voice) : undefined;
     const script = await getOrCreateTodayCasterScript(voice);
     return res.json({ script });

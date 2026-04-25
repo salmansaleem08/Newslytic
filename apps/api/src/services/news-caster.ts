@@ -197,7 +197,13 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
   const voice = NEWS_CASTER_VOICES.includes((requestedVoice || env.TTS_VOICE) as (typeof NEWS_CASTER_VOICES)[number])
     ? (requestedVoice || env.TTS_VOICE)
     : env.TTS_VOICE;
-  const existing = await NewsCasterScriptModel.findOne({ dayKey, cycleKey, voice }).lean();
+  let existing = await NewsCasterScriptModel.findOne({ dayKey, cycleKey, voice }).lean();
+  if (existing && existing.sections && existing.sections.length > 0) return toResponse(existing as never);
+
+  // Same calendar day but different 4h cycle: reuse latest script so the client does not wait on cold TTS again.
+  existing = await NewsCasterScriptModel.findOne({ dayKey, voice, "sections.0": { $exists: true } })
+    .sort({ createdAt: -1 })
+    .lean();
   if (existing && existing.sections && existing.sections.length > 0) return toResponse(existing as never);
 
   const todayItems = await NewsItemModel.find({ dayKey })
@@ -248,17 +254,26 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
     }
   ];
 
-  const sectionsWithAudio = [];
-  for (let index = 0; index < sections.length; index += 1) {
-    const section = sections[index];
-    const fileName = `caster-${cycleKey}-${safeVoice}-part-${index + 1}.mp3`;
-    const absoluteAudioPath = path.join(STORAGE_ROOT, fileName);
-    await runEdgeTts(section.text, absoluteAudioPath, voice);
-    sectionsWithAudio.push({
-      ...section,
-      audioPath: path.join("storage", "news-caster", fileName)
-    });
+  const CONCURRENCY = 4;
+  const sectionsWithAudio: Array<(typeof sections)[number] & { audioPath: string }> = new Array(sections.length);
+  let nextSectionIndex = 0;
+  async function ttsWorker(): Promise<void> {
+    for (;;) {
+      const index = nextSectionIndex;
+      nextSectionIndex += 1;
+      if (index >= sections.length) return;
+      const section = sections[index];
+      const fileName = `caster-${cycleKey}-${safeVoice}-part-${index + 1}.mp3`;
+      const absoluteAudioPath = path.join(STORAGE_ROOT, fileName);
+      await runEdgeTts(section.text, absoluteAudioPath, voice);
+      sectionsWithAudio[index] = {
+        ...section,
+        audioPath: path.join("storage", "news-caster", fileName)
+      };
+    }
   }
+  const poolSize = Math.min(CONCURRENCY, sections.length);
+  await Promise.all(Array.from({ length: poolSize }, () => ttsWorker()));
 
   const primaryAudioPath = sectionsWithAudio[0]?.audioPath ?? path.join("storage", "news-caster", toFileName(dayKey, voice));
   const created = await NewsCasterScriptModel.findOneAndUpdate(

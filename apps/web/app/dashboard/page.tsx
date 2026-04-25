@@ -105,7 +105,7 @@ export default function DashboardPage() {
           {loading ? (
             <div className="absolute inset-0">
               <Skeleton className="h-full w-full rounded-none" />
-              <div className="absolute inset-x-0 bottom-0 space-y-4 p-8">
+              <div className="absolute inset-x-0 bottom-0 space-y-4 p-4 sm:p-8">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-12 w-2/3 max-w-3xl" />
                 <Skeleton className="h-4 w-1/2 max-w-2xl" />
@@ -130,13 +130,13 @@ export default function DashboardPage() {
                   <div className="h-full w-full bg-muted" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-4 p-8">
-                  <div className="max-w-3xl">
-                    <h2 className="text-4xl font-bold leading-tight text-white">{activeItem.title}</h2>
-                    <p className="mt-3 text-base text-white/90">{activeItem.summary}</p>
+                <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-end sm:justify-between sm:p-8">
+                  <div className="min-w-0 max-w-3xl">
+                    <h2 className="text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">{activeItem.title}</h2>
+                    <p className="mt-2 text-sm text-white/90 sm:mt-3 sm:text-base">{activeItem.summary}</p>
                   </div>
-                  <Link href={`/dashboard/news/${activeItem._id}`}>
-                    <Button className="h-11 shrink-0">Read More</Button>
+                  <Link href={`/dashboard/news/${activeItem._id}`} className="shrink-0 sm:self-end">
+                    <Button className="h-11 w-full sm:w-auto">Read More</Button>
                   </Link>
                 </div>
               </motion.article>

@@ -32,7 +32,7 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "12mb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "newslytic-api" });
