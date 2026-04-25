@@ -34,6 +34,15 @@ const STORAGE_ROOT = path.resolve(process.cwd(), "storage", "news-caster");
 const PY_TTS_SCRIPT = path.resolve(process.cwd(), "src", "scripts", "edge_tts_generate.py");
 let indexesEnsured = false;
 const cloudinaryEnabled = Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
+let lastGenerationReport: {
+  generatedAt: string;
+  dayKey: string;
+  cycleKey: string;
+  voice: string;
+  totalSections: number;
+  playableSections: number;
+  failures: Array<{ index: number; heading: string; error: string }>;
+} | null = null;
 
 if (cloudinaryEnabled) {
   cloudinary.config({
@@ -85,6 +94,19 @@ async function uploadCasterAudioToCloudinary(localPath: string, publicId: string
     overwrite: true
   });
   return uploaded.secure_url;
+}
+
+async function checkCloudinaryConnectivity(): Promise<{ ok: boolean; message: string }> {
+  if (!cloudinaryEnabled) return { ok: false, message: "Cloudinary env vars are not fully configured." };
+  try {
+    await cloudinary.api.ping();
+    return { ok: true, message: "Cloudinary API ping successful." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Cloudinary API ping failed."
+    };
+  }
 }
 
 async function runEdgeTts(text: string, outputPath: string, voice: string): Promise<void> {
@@ -236,6 +258,50 @@ export async function getCasterScriptById(id: string): Promise<CasterPayload | n
   return toResponse(doc as never);
 }
 
+export async function getNewsCasterDiagnostics(): Promise<{
+  cloudinaryEnabled: boolean;
+  cloudinary: { ok: boolean; message: string };
+  tts: { pythonBin: string; scriptPath: string };
+  latestScript: null | {
+    id: string;
+    dayKey: string;
+    cycleKey: string;
+    voice: string;
+    sections: number;
+    playableSections: number;
+    createdAt?: string;
+  };
+  lastGenerationReport: typeof lastGenerationReport;
+}> {
+  await ensureCasterIndexes();
+  const cloudinaryStatus = await checkCloudinaryConnectivity();
+  const latest = await NewsCasterScriptModel.findOne({})
+    .sort({ createdAt: -1 })
+    .select({ dayKey: 1, cycleKey: 1, voice: 1, sections: 1, createdAt: 1 })
+    .lean();
+
+  return {
+    cloudinaryEnabled,
+    cloudinary: cloudinaryStatus,
+    tts: {
+      pythonBin: env.TTS_PYTHON_BIN_NEWS_CASTER || env.TTS_PYTHON_BIN,
+      scriptPath: PY_TTS_SCRIPT
+    },
+    latestScript: latest
+      ? {
+          id: String(latest._id),
+          dayKey: latest.dayKey,
+          cycleKey: latest.cycleKey,
+          voice: latest.voice,
+          sections: latest.sections?.length ?? 0,
+          playableSections: (latest.sections ?? []).filter((section) => Boolean(section.audioPath)).length,
+          createdAt: latest.createdAt?.toISOString()
+        }
+      : null,
+    lastGenerationReport
+  };
+}
+
 export async function getOrCreateTodayCasterScript(requestedVoice?: string): Promise<CasterPayload> {
   await ensureCasterIndexes();
   const now = new Date();
@@ -307,6 +373,7 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
 
   const CONCURRENCY = 4;
   const sectionsWithAudio: Array<(typeof sections)[number] & { audioPath: string }> = new Array(sections.length);
+  const failures: Array<{ index: number; heading: string; error: string }> = [];
   let nextSectionIndex = 0;
   async function ttsWorker(): Promise<void> {
     for (;;) {
@@ -329,6 +396,11 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
         };
       } catch (error) {
         console.error("News caster TTS segment generation failed:", error);
+        failures.push({
+          index,
+          heading: section.heading || section.kind,
+          error: error instanceof Error ? error.message : "Unknown TTS/upload failure"
+        });
         sectionsWithAudio[index] = {
           ...section,
           audioPath: ""
@@ -339,6 +411,16 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
   const poolSize = Math.min(CONCURRENCY, sections.length);
   await Promise.all(Array.from({ length: poolSize }, () => ttsWorker()));
   const firstPlayable = sectionsWithAudio.find((section) => Boolean(section.audioPath));
+  const playableSections = sectionsWithAudio.filter((section) => Boolean(section.audioPath)).length;
+  lastGenerationReport = {
+    generatedAt: new Date().toISOString(),
+    dayKey,
+    cycleKey,
+    voice,
+    totalSections: sectionsWithAudio.length,
+    playableSections,
+    failures
+  };
   const primaryAudioPath = firstPlayable?.audioPath ?? "";
   const created = await NewsCasterScriptModel.findOneAndUpdate(
     { dayKey, cycleKey, voice },

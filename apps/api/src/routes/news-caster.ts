@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { NEWS_CASTER_VOICES, getCasterHistory, getCasterScriptById, getOrCreateTodayCasterScript } from "../services/news-caster.js";
+import { NEWS_CASTER_VOICES, getCasterHistory, getCasterScriptById, getNewsCasterDiagnostics, getOrCreateTodayCasterScript } from "../services/news-caster.js";
 import { runNewsSync } from "../services/news-sync.js";
 
 export const newsCasterRouter = Router();
@@ -31,4 +31,16 @@ newsCasterRouter.get("/script/:id", async (req, res) => {
   const script = await getCasterScriptById(req.params.id);
   if (!script) return res.status(404).json({ error: "Script not found" });
   return res.json({ script });
+});
+
+newsCasterRouter.get("/diagnostics", async (_req, res) => {
+  try {
+    const diagnostics = await getNewsCasterDiagnostics();
+    return res.json({ diagnostics });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Unable to gather diagnostics",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
 });
