@@ -51,6 +51,10 @@ Environment variables on Render:
   - `TTS_PYTHON_BIN=python`
   - `TTS_PYTHON_BIN_NEWS_CASTER=python`
   - `TTS_VOICE=en-US-ChristopherNeural`
+  - `CLOUDINARY_CLOUD_NAME=<cloud-name>`
+  - `CLOUDINARY_API_KEY=<api-key>`
+  - `CLOUDINARY_API_SECRET=<api-secret>`
+  - `CLOUDINARY_FOLDER=newslytic/news-caster`
 
 Important:
 - Free Render services can sleep, which can delay cron execution.
@@ -106,14 +110,10 @@ Tips:
 - Use additive schema updates in Mongo to avoid migrations blocking deploys
 - Keep API backward-compatible where possible (new fields optional)
 
-## 8) Known limitation and recommended next step
+## 8) News Caster storage
 
-Current News Caster audio is written to local disk (`apps/api/storage/news-caster`).
+If Cloudinary vars are set, News Caster uploads generated audio to Cloudinary and stores remote URLs in Mongo.
 
-On free cloud services, local disk is ephemeral. After restart/redeploy, old audio files may be missing.
+If Cloudinary vars are NOT set, News Caster uses local disk (`apps/api/storage/news-caster`) which is ephemeral on free cloud services.
 
-Recommended production fix:
-- Move caster audio to object storage (Cloudinary / S3-compatible bucket)
-- Store file URLs in DB instead of local paths
-
-This can be added in a follow-up without major architecture changes.
+For production reliability, keep Cloudinary enabled.

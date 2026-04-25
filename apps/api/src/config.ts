@@ -22,7 +22,11 @@ const envSchema = z.object({
   NEWS_SYNC_INTERVAL_MINUTES: z.coerce.number().default(240),
   TTS_PYTHON_BIN: z.string().default("python"),
   TTS_PYTHON_BIN_NEWS_CASTER: z.string().optional(),
-  TTS_VOICE: z.string().default("en-US-ChristopherNeural")
+  TTS_VOICE: z.string().default("en-US-ChristopherNeural"),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  CLOUDINARY_FOLDER: z.string().default("newslytic/news-caster")
 });
 
 export const env = envSchema.parse(process.env);

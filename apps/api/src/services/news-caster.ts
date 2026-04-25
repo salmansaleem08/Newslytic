@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { v2 as cloudinary } from "cloudinary";
 import { env } from "../config.js";
 import { NewsCasterScriptModel } from "../models/news-caster-script.js";
 import { NewsItemModel } from "../models/news-item.js";
@@ -32,6 +33,16 @@ type CasterPayload = {
 const STORAGE_ROOT = path.resolve(process.cwd(), "storage", "news-caster");
 const PY_TTS_SCRIPT = path.resolve(process.cwd(), "src", "scripts", "edge_tts_generate.py");
 let indexesEnsured = false;
+const cloudinaryEnabled = Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
+
+if (cloudinaryEnabled) {
+  cloudinary.config({
+    cloud_name: env.CLOUDINARY_CLOUD_NAME,
+    api_key: env.CLOUDINARY_API_KEY,
+    api_secret: env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
+}
 export const NEWS_CASTER_VOICES = [
   "en-US-ChristopherNeural",
   "en-US-GuyNeural",
@@ -61,9 +72,19 @@ function getCycleKey(date = new Date()): string {
   return `${dayKey}-h${String(cycleHour).padStart(2, "0")}`;
 }
 
-function toFileName(dayKey: string, voice: string): string {
-  const safeVoice = voice.replace(/[^a-zA-Z0-9-_]/g, "_");
-  return `caster-${dayKey}-${safeVoice}.mp3`;
+function isRemoteAsset(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+async function uploadCasterAudioToCloudinary(localPath: string, publicId: string): Promise<string> {
+  if (!cloudinaryEnabled) return localPath;
+  const uploaded = await cloudinary.uploader.upload(localPath, {
+    resource_type: "video",
+    folder: env.CLOUDINARY_FOLDER,
+    public_id: publicId,
+    overwrite: true
+  });
+  return uploaded.secure_url;
 }
 
 async function runEdgeTts(text: string, outputPath: string, voice: string): Promise<void> {
@@ -112,6 +133,7 @@ async function pruneScriptHistory(): Promise<void> {
       ];
       await Promise.all(
         cleanupTargets.map(async (targetPath) => {
+          if (!targetPath || isRemoteAsset(targetPath)) return;
           const abs = path.resolve(process.cwd(), targetPath);
           await fs.rm(abs, { force: true }).catch(() => undefined);
         })
@@ -125,8 +147,9 @@ async function hasPlayableSections(
     audioPath: string;
   }>
 ): Promise<boolean> {
-  const firstPlayable = sections.find((section) => Boolean(path.basename(section.audioPath || "")));
+  const firstPlayable = sections.find((section) => Boolean(section.audioPath || ""));
   if (!firstPlayable) return false;
+  if (isRemoteAsset(firstPlayable.audioPath)) return true;
   const absolute = path.resolve(process.cwd(), firstPlayable.audioPath);
   try {
     await fs.access(absolute);
@@ -169,14 +192,15 @@ function toResponse(doc: {
     outro: doc.outro,
     segments: doc.segments,
     sections: doc.sections.map((section) => {
-      const fileName = path.basename(section.audioPath || "");
+      const rawPath = section.audioPath || "";
+      const fileName = path.basename(rawPath);
       return {
         kind: section.kind,
         heading: section.heading ?? "",
         text: section.text,
         imageUrl: section.imageUrl ?? "",
         source: section.source ?? "",
-        audioUrl: fileName ? `/media/news-caster/${fileName}` : ""
+        audioUrl: !rawPath ? "" : isRemoteAsset(rawPath) ? rawPath : fileName ? `/media/news-caster/${fileName}` : ""
       };
     })
   };
@@ -194,8 +218,12 @@ export async function getCasterHistory(): Promise<Array<{ dayKey: string; voice:
     cycleKey: row.cycleKey ?? `${row.dayKey}-h00`,
     voice: row.voice,
     audioUrl: row.sections?.[0]?.audioPath
-      ? `/media/news-caster/${path.basename(row.sections[0].audioPath)}`
-      : `/media/news-caster/${path.basename(row.audioPath || "")}`,
+      ? isRemoteAsset(row.sections[0].audioPath)
+        ? row.sections[0].audioPath
+        : `/media/news-caster/${path.basename(row.sections[0].audioPath)}`
+      : isRemoteAsset(row.audioPath || "")
+        ? String(row.audioPath || "")
+        : `/media/news-caster/${path.basename(row.audioPath || "")}`,
     segmentCount: row.segments.length,
     createdAt: row.createdAt
   }));
@@ -290,9 +318,14 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
       const absoluteAudioPath = path.join(STORAGE_ROOT, fileName);
       try {
         await runEdgeTts(section.text, absoluteAudioPath, voice);
+        const publicId = `${cycleKey}-${safeVoice}-part-${index + 1}`;
+        const persistedAudioPath = await uploadCasterAudioToCloudinary(absoluteAudioPath, publicId);
+        if (cloudinaryEnabled) {
+          await fs.rm(absoluteAudioPath, { force: true }).catch(() => undefined);
+        }
         sectionsWithAudio[index] = {
           ...section,
-          audioPath: path.join("storage", "news-caster", fileName)
+          audioPath: persistedAudioPath
         };
       } catch (error) {
         console.error("News caster TTS segment generation failed:", error);
@@ -305,8 +338,9 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
   }
   const poolSize = Math.min(CONCURRENCY, sections.length);
   await Promise.all(Array.from({ length: poolSize }, () => ttsWorker()));
+  const playableSections = sectionsWithAudio.filter((section) => Boolean(section.audioPath));
 
-  const primaryAudioPath = sectionsWithAudio[0]?.audioPath ?? path.join("storage", "news-caster", toFileName(dayKey, voice));
+  const primaryAudioPath = playableSections[0]?.audioPath ?? "";
   const created = await NewsCasterScriptModel.findOneAndUpdate(
     { dayKey, cycleKey, voice },
     {
@@ -316,7 +350,7 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
       intro,
       outro,
       segments,
-      sections: sectionsWithAudio,
+      sections: playableSections,
       audioPath: primaryAudioPath
     },
     { upsert: true, new: true }
