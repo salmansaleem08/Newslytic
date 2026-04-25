@@ -89,7 +89,7 @@ export default function DashboardPage() {
         className="fixed left-0 right-0 top-0 z-[120] border-border/60 bg-background/85 text-foreground shadow-sm backdrop-blur-lg supports-[backdrop-filter]:bg-background/75"
       />
       <main className="w-full pt-[var(--header-height)]">
-        <section className="relative h-screen w-full overflow-hidden">
+        <section className="relative h-[calc(100vh-var(--header-height))] w-full overflow-hidden">
           {items.length > 1 ? (
             <>
               <Button

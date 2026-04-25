@@ -143,6 +143,17 @@ export default function AiNewsCasterPage() {
     }
   }
 
+  function moveToNextPlayableSegment(): void {
+    if (activeClipIndex < sections.length - 1) {
+      setShouldAutoPlay(true);
+      setActiveClipIndex((prev) => Math.min(prev + 1, sections.length - 1));
+      return;
+    }
+    setIsPlaying(false);
+    setShouldAutoPlay(false);
+    setError("Audio source is unavailable for this segment. Please try another broadcast/voice.");
+  }
+
   async function loadHistoryScript(historyId: string) {
     try {
       setLoading(true);
@@ -299,9 +310,7 @@ export default function AiNewsCasterPage() {
                       }
                     }}
                     onError={() => {
-                      setIsPlaying(false);
-                      setShouldAutoPlay(false);
-                      setError("Audio source is unavailable for this segment. Please try another broadcast/voice.");
+                      moveToNextPlayableSegment();
                     }}
                   />
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">

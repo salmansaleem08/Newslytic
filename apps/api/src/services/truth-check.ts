@@ -2,7 +2,7 @@ import axios from "axios";
 import crypto from "node:crypto";
 import { env } from "../config.js";
 import { TruthCheckCacheModel } from "../models/truth-check-cache.js";
-import { assessClaimWithEvidence, summarizeTruthCheck } from "./gemini.js";
+import { assessClaimDirect, assessClaimWithEvidence, summarizeTruthCheck } from "./gemini.js";
 
 type Source = {
   publisher: string;
@@ -148,9 +148,11 @@ export async function verifyClaim(claim: string): Promise<TruthCheckResult> {
   const hash = claimHash(normalized);
   const cached = await TruthCheckCacheModel.findOne({ claimHash: hash }).lean();
   if (cached) {
-    const isWeakVerdict = /insufficient evidence/i.test(cached.verdict);
     const ageMs = Date.now() - new Date(cached.updatedAt ?? cached.fetchedAt).getTime();
-    if (!(isWeakVerdict && ageMs > 60 * 60 * 1000)) {
+    const isWeakVerdict = /insufficient evidence|mixed/i.test(cached.verdict);
+    const isStale = ageMs > 20 * 60 * 1000;
+    const shouldRefresh = isWeakVerdict || isStale;
+    if (!shouldRefresh) {
       return {
         claim: cached.claim,
         verdict: cached.verdict,
@@ -177,6 +179,13 @@ export async function verifyClaim(claim: string): Promise<TruthCheckResult> {
   const localVerdict = buildVerdict(graph);
   let verdictInfo = localVerdict;
   let summary = "";
+
+  const directGemini = await assessClaimDirect({ claim });
+  const directGeminiMapped = {
+    verdict: fromGeminiVerdict(directGemini.verdict),
+    confidence: directGemini.confidence,
+    summary: directGemini.summary
+  };
 
   let geminiResult: { verdict: string; confidence: number; summary: string } | null = null;
   if (sources.length > 0) {
@@ -211,7 +220,11 @@ export async function verifyClaim(claim: string): Promise<TruthCheckResult> {
       }
     : null;
   const selected =
-    geminiCandidate && geminiCandidate.confidence >= localCandidate.confidence ? geminiCandidate : localCandidate;
+    [
+      localCandidate,
+      ...(geminiCandidate ? [geminiCandidate] : []),
+      { verdict: directGeminiMapped.verdict, confidence: directGeminiMapped.confidence, summary: directGeminiMapped.summary, provider: "gemini" as const }
+    ].sort((a, b) => b.confidence - a.confidence)[0];
 
   verdictInfo = { verdict: selected.verdict, confidence: selected.confidence };
   if (selected.provider === "gemini" && selected.summary) {

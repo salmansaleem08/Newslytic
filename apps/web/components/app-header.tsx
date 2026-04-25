@@ -79,19 +79,19 @@ export function AppHeader({ showLogout = true, className, overlay = false }: Pro
           })}
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
           <Link href="/dashboard/settings">
             <Button
               variant={pathname.startsWith("/dashboard/settings") ? "default" : "outline"}
               size="icon"
               aria-label="Open settings"
-              className="h-9 w-9 sm:h-10 sm:w-10"
+              className="h-10 w-10 sm:h-10 sm:w-10"
             >
-              <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+              <Settings className="h-[18px] w-[18px]" />
             </Button>
           </Link>
           {showLogout ? (
-            <Button variant="outline" size="sm" onClick={logout} className="hidden h-9 px-2 sm:h-10 sm:px-3 md:inline-flex">
+            <Button variant="outline" size="sm" onClick={logout} className="hidden h-10 px-3 md:inline-flex">
               <LogOut className="h-4 w-4" />
               <span className="hidden lg:inline">Logout</span>
             </Button>
@@ -100,12 +100,12 @@ export function AppHeader({ showLogout = true, className, overlay = false }: Pro
             type="button"
             variant="outline"
             size="icon"
-            className="h-9 w-9 sm:h-10 sm:w-10 lg:hidden"
+            className="h-10 w-10 lg:hidden"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((open) => !open)}
           >
-            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            {mobileOpen ? <X className="h-[18px] w-[18px]" /> : <Menu className="h-[18px] w-[18px]" />}
           </Button>
         </div>
       </div>
@@ -117,10 +117,10 @@ export function AppHeader({ showLogout = true, className, overlay = false }: Pro
             className="absolute right-0 top-0 flex h-full w-[min(100%,20rem)] flex-col border-l border-border bg-background shadow-xl"
             aria-label="Mobile main"
           >
-            <div className="flex h-[var(--header-height)] items-center justify-between border-b border-border px-3">
-              <span className="text-sm font-semibold text-foreground">Menu</span>
-              <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Close menu" onClick={() => setMobileOpen(false)}>
-                <X className="h-4 w-4" />
+            <div className="flex h-[var(--header-height)] items-center justify-between border-b border-border px-4">
+              <span className="text-base font-semibold text-foreground">Menu</span>
+              <Button type="button" variant="ghost" size="icon" className="h-10 w-10" aria-label="Close menu" onClick={() => setMobileOpen(false)}>
+                <X className="h-[18px] w-[18px]" />
               </Button>
             </div>
             <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">

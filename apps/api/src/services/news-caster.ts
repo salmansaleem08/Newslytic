@@ -120,6 +120,22 @@ async function pruneScriptHistory(): Promise<void> {
   );
 }
 
+async function hasPlayableSections(
+  sections: Array<{
+    audioPath: string;
+  }>
+): Promise<boolean> {
+  const firstPlayable = sections.find((section) => Boolean(path.basename(section.audioPath || "")));
+  if (!firstPlayable) return false;
+  const absolute = path.resolve(process.cwd(), firstPlayable.audioPath);
+  try {
+    await fs.access(absolute);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function buildSegments(items: Array<{ title: string; summary: string; imageUrl: string; source: string }>): ScriptSegment[] {
   return items.map((item) => ({
     heading: item.title,
@@ -201,13 +217,17 @@ export async function getOrCreateTodayCasterScript(requestedVoice?: string): Pro
     ? (requestedVoice || env.TTS_VOICE)
     : env.TTS_VOICE;
   let existing = await NewsCasterScriptModel.findOne({ dayKey, cycleKey, voice }).lean();
-  if (existing && existing.sections && existing.sections.length > 0) return toResponse(existing as never);
+  if (existing && existing.sections && existing.sections.length > 0 && (await hasPlayableSections(existing.sections as Array<{ audioPath: string }>))) {
+    return toResponse(existing as never);
+  }
 
   // Same calendar day but different 4h cycle: reuse latest script so the client does not wait on cold TTS again.
   existing = await NewsCasterScriptModel.findOne({ dayKey, voice, "sections.0": { $exists: true } })
     .sort({ createdAt: -1 })
     .lean();
-  if (existing && existing.sections && existing.sections.length > 0) return toResponse(existing as never);
+  if (existing && existing.sections && existing.sections.length > 0 && (await hasPlayableSections(existing.sections as Array<{ audioPath: string }>))) {
+    return toResponse(existing as never);
+  }
 
   const todayItems = await NewsItemModel.find({ dayKey })
     .sort({ relevanceScore: -1, publishedAt: -1 })

@@ -139,6 +139,52 @@ export async function assessClaimWithEvidence(payload: {
   };
 }
 
+export async function assessClaimDirect(payload: {
+  claim: string;
+}): Promise<{ verdict: string; confidence: number; summary: string }> {
+  try {
+    const response = await genai.models.generateContent({
+      model: env.GEMINI_MODEL,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: [
+                "Evaluate the claim using your best current knowledge and broad context.",
+                "Return strict JSON with keys: verdict, confidence, summary.",
+                "verdict must be one of: Yes, No, Unclear.",
+                "confidence must be integer 0-100.",
+                "summary should be 2-4 plain lines without markdown symbols.",
+                "",
+                `Claim: ${payload.claim}`
+              ].join("\n")
+            }
+          ]
+        }
+      ]
+    });
+
+    const text = response.text ?? "";
+    const jsonCandidate = text.match(/\{[\s\S]*\}/)?.[0] ?? "";
+    if (jsonCandidate) {
+      const parsed = JSON.parse(jsonCandidate) as { verdict?: string; confidence?: number; summary?: string };
+      const verdict = ["Yes", "No", "Unclear"].includes(String(parsed.verdict)) ? String(parsed.verdict) : "Unclear";
+      const confidence = Number.isFinite(parsed.confidence) ? Math.max(0, Math.min(100, Math.round(Number(parsed.confidence)))) : 55;
+      const summary = String(parsed.summary ?? "").trim();
+      if (summary) return { verdict, confidence, summary };
+    }
+  } catch (error) {
+    console.error("Gemini direct claim assessment failed:", error);
+  }
+
+  return {
+    verdict: "Unclear",
+    confidence: 45,
+    summary: "Not enough certainty from direct model reasoning alone. Use corroborating sources for stronger verification."
+  };
+}
+
 export async function analyzeNewsSignals(payload: {
   title: string;
   summary: string;
